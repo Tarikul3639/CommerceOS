@@ -30,7 +30,7 @@ Do not reread the entire codebase by default. Use this map, then inspect only th
 1. **API authorization is not consistently enforced.** The root module does not register a global authentication guard. The order controller has no guards; the cart add-item endpoint uses a hard-coded `CUSTOMER_ID`; admin product endpoints have no guards. Treat this as a security blocker before exposing the API.
 2. **Storefront is not implemented yet.** Representative tracked routes and API/auth/store files are zero bytes; `pnpm build` fails on `src/app/(account)/account/addresses/page.tsx` because it is not a module.
 3. **Payment gateway execution is incomplete.** Provider adapter/client/config source files for bKash and SSLCommerz are zero bytes; the payment factory always throws; payment creation does not start a provider session. Gateway configuration CRUD exists but does not complete payment processing.
-4. **Admin has unfinished screens and route mismatches.** Orders, notifications, emails and employees components are basic heading placeholders; payments is only a heading/description; returns returns null. Navigation contains Discounts and Carts links but matching dashboard routes/features were not found in the tracked route inventory.
+4. **Admin has unfinished screens and route mismatches.** Emails now has a delivery-log UI and secured API; Employees remains a placeholder. Payments, returns and navigation gaps still require follow-up audit.
 5. **Discount domain is incomplete.** `backend/prisma/models/discount.prisma` is zero bytes; discount permissions/enums and admin navigation references exist, but a working discount model/module/route was not found.
 6. **Backend environment example is stale.** Validation and Prisma config expect `DATABASE_URL`; `backend/.env.example` currently documents `PRISMA_DATABASE_URL`. Never read actual `.env*` secrets to investigate this.
 7. **Test coverage is inadequate.** Backend unit test currently contains an empty assertion; only one test suite exists. Add focused tests around auth/authorization, cart, orders, stock and payments.
@@ -173,3 +173,27 @@ Do not reread the entire codebase by default. Use this map, then inspect only th
 - Added loading/empty states and a responsive, scrollable popover. Users without `NOTIFICATION_READ` do not trigger the notifications query or see the control.
 - Verification: Admin `pnpm typecheck`, `pnpm build`, and `git diff --check` passed.
 - No backend/API changes, database operations, commits or pushes.
+
+### 2026-11-18 — Admin Emails module
+- Replaced the Emails placeholder with a paginated, searchable email delivery log table, status filtering and a responsive lazy-loaded details dialog.
+- Added backend `GET /emails` and `GET /emails/:id`, protected by staff JWT authentication, PermissionsGuard and the new `EMAIL_READ` permission. List supports recipient/subject/related-entity search, status and date filters.
+- Connected email logging centrally in `MailService.sendMail`: every actual mail send creates a PENDING log, increments the attempt count, and records SENT or FAILED after the transport result. The stored preview is only a safe template identifier; rendered content, reset links and authentication tokens are never persisted or returned.
+- Added Prisma permission migration and a follow-up migration granting `EMAIL_READ` to existing ADMIN and SUPER_ADMIN roles. Added the permission to the role-permission seed definition.
+- Retry is intentionally not exposed because the system does not retain a safe replayable template payload.
+- Verification: Prisma format/generate passed; backend TypeScript check/build passed; Admin typecheck/build passed; `git diff --check` passed in both apps.
+- Migrations were not applied, role permissions were not seeded in the database, and no commit/push was created. Apply the two migrations before using the Emails screen.
+- Added `backend/prisma/seed/emails.seed.ts` with six repeatable EmailLog fixtures covering SENT, FAILED and PENDING states; fixture IDs use the `commerceos-email-test` prefix and use safe template summaries rather than rendered email content. The main seed runner invokes it after the existing user/customer/return fixture steps.
+- Verification for the seed addition: backend `pnpm exec tsc --noEmit`, `pnpm build`, and `git diff --check` passed.
+- Seed was not executed and no database was changed. Existing pending migrations must be applied before the main seed runner can successfully create the EmailLog fixtures.
+- Next Admin module: Employees. Wait for user verification before starting it.
+
+
+### 2026-11-18 — Admin Employees module
+- Replaced the Employees placeholder with a paginated staff directory backed by the existing Users domain; only MANAGER and EMPLOYEE records are returned by the dedicated `staffOnly` query filter, avoiding a duplicate employee model.
+- Added an employee creation dialog with MANAGER/EMPLOYEE-only role choices and a dedicated `POST /users/employees` DTO/endpoint that enforces the same restriction server-side while reusing the existing account creation and welcome-email behavior.
+- Added the Employees navigation link under Management, gated by USER_READ.
+- Extended the user query DTO/service with role and staff-only filters.
+- Applied UserJwtAuthGuard and PermissionsGuard to the Users controller; create/list/detail/update/status/restore/delete routes now require the corresponding USER_CREATE/READ/UPDATE/DELETE permission. Existing SUPER_ADMIN-only status and restore role checks remain.
+- Verification: backend `pnpm exec tsc --noEmit` and `pnpm build` passed; Admin `pnpm typecheck` and `pnpm build` passed; `git diff --check` passed in both app repos.
+- No migrations, seed execution, database writes, commits or pushes. Existing unrelated dirty work in Admin/Backend was preserved.
+- Next Admin module: Carts. Wait for user verification before starting it.

@@ -15,10 +15,14 @@ Work module-by-module. Follow the established code structure in `AGENTS.md`; com
 3. **Order Returns** — Completed for the agreed workflow: PENDING → APPROVED or REJECTED; APPROVED → COMPLETED. Rejection reason and decision actors/timestamps are audited. Approval validates cumulative returned quantities; completion restores tracked variant stock transactionally. Refund execution remains separate and deferred until verified gateway refund support exists. Apply the new Prisma migration before using the decision endpoints.
 4. **Notifications**
    - Admin list/detail/read/unread and supported notification actions; align with backend API.
-5. **Emails**
-   - Email log list/detail, status filters and retry only if backend exposes a safe retry operation.
-6. **Employees**
-   - Complete employee/staff management using existing users/roles/permissions contracts; avoid duplicating user management without a domain distinction.
+5. **Emails** — Completed
+   - Paginated email delivery log list/detail and status/search filters.
+   - Centralized send-attempt logging with PENDING/SENT/FAILED states and safe template summaries.
+   - Staff JWT + EMAIL_READ permission; retry intentionally omitted because no safe replayable payload exists.
+6. **Employees** — Completed
+   - Added a staff-only directory for MANAGER and EMPLOYEE accounts, using the existing user domain rather than duplicating employee records.
+   - Added employee creation with restricted MANAGER/EMPLOYEE role choices and a backend staff-only list filter.
+   - Secured all user-management routes with staff JWT authentication and USER_CREATE/READ/UPDATE/DELETE permissions.
 7. **Carts**
    - Decide whether this is an admin operational screen or remove unsupported navigation. Build only against a defined, secured backend contract.
 8. **Discounts**
