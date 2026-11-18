@@ -243,3 +243,23 @@ Do not reread the entire codebase by default. Use this map, then inspect only th
 - Verification: backend `pnpm exec tsc --noEmit`, `pnpm build`, `pnpm exec prisma validate`; Admin `pnpm exec tsc --noEmit`, `pnpm build`; `git diff --check` passed after whitespace cleanup.
 - No database migrations or seeds were executed. Discounts verification by the user remains pending; Settings must not start until the user confirms and explicitly asks.
 - Commits: pending at time of this log entry.
+
+### 2026-11-19 — Fix product image tab for products without images
+- Root cause: the update route parameter can be a product slug, while the Product Images API requires a UUID (`ParseUUIDPipe`). The update form passed the route parameter into `ProductImages`, causing its image query to fail and the component to render an error state before exposing the upload controls.
+- Changed `admin/src/features/products/components/update/update-product-form.tsx` to pass the loaded product's canonical UUID (`product.id`) to `ProductImages`, consistent with the Options and Variants tabs.
+- Verification: Admin `pnpm exec tsc --noEmit`, `pnpm build` and `git diff --check` passed. No commit or push created. User verification pending.
+
+### 2026-11-19 — Standardize Admin edit/update actions
+- Standardized visible Admin edit/update action controls on `SquarePen` with `className="size-4"` and the label `Update`.
+- Updated Discounts, Users, Product Variants, Product Details, Payment Gateway cards and Banner list/detail actions. Removed the now-unused Pencil icon import from the permissions update dialog. Existing Customers, Brands, Size Guides, Products list, Categories, Purchases, Stock, Suppliers and Permissions actions already used the requested pattern.
+- Verification: Admin `pnpm exec tsc --noEmit`, `pnpm build` and `git diff --check` passed. Changes remain uncommitted; user review pending.
+
+### 2026-11-19 — Keep product image upload available when image fetch fails
+- Confirmed backend `GetProductImagesService` returns an empty array for an existing product with zero images; it throws `Product not found` only when the product itself is missing. The Admin previously replaced the entire image editor with a blocking `ErrorState` whenever the GET query errored.
+- Updated `admin/src/features/products/components/form/product-images.tsx`: query errors now show a non-blocking inline warning and Retry button while preserving the file picker, drag/drop and Save Images controls. Empty image arrays continue to render the normal empty upload state.
+- Verification: Admin `pnpm exec tsc --noEmit`, `pnpm build` and `git diff --check` passed. No commit or push. User should retest the Images tab and add/save flow.
+
+### 2026-11-19 — Accept legacy product identifiers in product-image routes
+- User reported `POST /api/v1/admin/product-images/commerceos-return-test-product` failing with `Validation failed (uuid is expected)`. Confirmed the Admin detail route and product response can supply this legacy slug-like product identifier, while the product-image controller incorrectly enforced UUID parsing on `productId` for both GET and POST.
+- Removed `ParseUUIDPipe` only from product-image `productId` route parameters; retained UUID validation for `imageId` on PATCH/DELETE because image IDs are UUIDs. Product-image services continue using the supplied product identifier to find the product.
+- Verification: Backend `pnpm exec tsc --noEmit`, `pnpm build`, and `git diff --check` passed. No database changes, commit, or push. User should retry loading and adding images.
