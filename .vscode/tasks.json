@@ -1,0 +1,43 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Backend",
+      "type": "shell",
+      "command": "source ~/.bashrc && clear && pnpm run start:dev",
+      "options": {
+        "cwd": "${workspaceFolder}/backend",
+        "shell": {
+          "executable": "/bin/bash",
+          "args": ["-c"]
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "dev",
+        "focus": false,
+        "clear": true
+      }
+    },
+    {
+      "label": "Admin",
+      "type": "shell",
+      "command": "source ~/.bashrc && clear && pnpm run dev",
+      "options": {
+        "cwd": "${workspaceFolder}/admin",
+        "shell": {
+          "executable": "/bin/bash",
+          "args": ["-c"]
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "dev",
+        "focus": false,
+        "clear": true
+      }
+    }
+  ]
+}
