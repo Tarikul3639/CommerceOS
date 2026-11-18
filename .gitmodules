@@ -8,3 +8,6 @@
 [submodule "docs"]
 	path = docs
 	url = git@github.com:Tarikul3639/commerceos-docs.git
+[submodule "backend"]
+	path = backend
+	url = git@github.com:Tarikul3639/commerceos-backend.git
