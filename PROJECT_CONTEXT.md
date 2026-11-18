@@ -215,3 +215,31 @@ Do not reread the entire codebase by default. Use this map, then inspect only th
 - The seed requires the existing customer seed and `seedOrderReturns()` to have created the shared test product/variant first.
 - Verification: pending.
 - The seed was not executed; no database was modified. Run the main seed only after confirming the intended development database and applying required migrations.
+
+### 2026-11-19 — Admin Discounts module
+- Added the Prisma Discount model and DiscountType enum for normalized unique coupon codes, percentage/fixed values, minimum order amount, optional percentage cap, start/end validity, optional total usage cap, active state and staff audit relations.
+- Added staff-protected CRUD endpoints at /discounts, guarded by UserJwtAuthGuard + PermissionsGuard and DISCOUNT_CREATE/READ/UPDATE/DELETE. Codes are normalized to uppercase; duplicate codes conflict; percentage values are capped at 100; invalid date ranges and fixed-discount caps are rejected.
+- Added the Discounts Admin page with paginated/searchable list, active filter, create/edit dialog, validation, status display and confirmed deletion.
+- Updated ADMIN permission seeding and added a migration to grant existing ADMIN roles the four discount permissions. Existing MANAGER read permission remains.
+- Important limitation: coupon redemption/checkout application, usage counting/enforcement and per-customer limits are not implemented. The configured total usage limit is stored for future checkout integration; it is not yet enforced by order creation. No automatic discounts.
+- Verification: Prisma format/generate/validate passed; backend pnpm exec tsc --noEmit and pnpm build passed; Admin pnpm exec tsc --noEmit and pnpm build passed (route /dashboard/discounts generated); git diff --check passed in both app repos.
+- No migrations or seeds were executed; no database changed. No commit or push. The unrelated pre-existing Admin change to src/components/media/app-image.tsx was preserved.
+- Next Admin module: Settings; wait for Discounts verification before starting it.
+
+
+### 2026-11-19 — Discounts form validation alignment
+- Reviewed existing Admin feature patterns in Customers, Brands and Stock. These place Zod schemas under `features/<feature>/schemas` and use `react-hook-form` with `zodResolver`, displaying field-level errors.
+- Refactored `admin/src/features/discounts/components/discount-form-dialog.tsx` to use `useForm`, `zodResolver`, `register`/`Controller`, reset-on-open edit/create values and inline field errors.
+- Added `admin/src/features/discounts/schemas/discount.schema.ts` with coupon code, positive amount, percentage cap, minimum order, optional cap, date ordering and positive integer usage limit validation.
+- Payload conversion remains explicit at submit time; values are normalized and converted to API number/ISO date/null fields. Existing create/update mutation behavior and loading/error toasts are retained.
+- Verification: Admin `pnpm exec tsc --noEmit`, `pnpm build` (including `/dashboard/discounts`) and `git diff --check` passed.
+- No migrations, seeds, commits or pushes run. Existing unrelated Admin working-tree changes were preserved.
+
+### 2026-11-19 — Discounts integration review and commit
+- Reviewed the Discounts backend module wiring, Prisma/User audit relations, DISCOUNT_* permission seeding, Admin RTK Query feature, route entrypoint and navigation placement.
+- Moved the Discounts navigation entry from Catalog to Marketing beside Banners, matching its promotional/coupon-management responsibility. The route remains `/dashboard/discounts` and is gated by `DISCOUNT_READ`.
+- Confirmed Discounts is integrated as its own backend feature module and Admin feature; it is not yet integrated into cart/order checkout or coupon redemption. Usage-limit configuration is stored but not enforced. Those are known domain gaps, not silently implied functionality.
+- Preserved and included all existing working-tree changes requested for this commit, including the pending Carts formatting/response-description changes and Admin image styling/base API newline adjustments.
+- Verification: backend `pnpm exec tsc --noEmit`, `pnpm build`, `pnpm exec prisma validate`; Admin `pnpm exec tsc --noEmit`, `pnpm build`; `git diff --check` passed after whitespace cleanup.
+- No database migrations or seeds were executed. Discounts verification by the user remains pending; Settings must not start until the user confirms and explicitly asks.
+- Commits: pending at time of this log entry.

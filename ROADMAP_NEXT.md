@@ -23,13 +23,16 @@ Work module-by-module. Follow the established code structure in `AGENTS.md`; com
    - Added a staff-only directory for MANAGER and EMPLOYEE accounts, using the existing user domain rather than duplicating employee records.
    - Added employee creation with restricted MANAGER/EMPLOYEE role choices and a backend staff-only list filter.
    - Secured all user-management routes with staff JWT authentication and USER_CREATE/READ/UPDATE/DELETE permissions.
-7. **Carts** — Implemented; user verification pending
+7. **Carts** — Implemented and user-verified
    - Read-only Admin overview of non-empty customer carts with pagination, customer/product search, line count, total quantity, estimated merchandise value, last activity and responsive item details.
-   - Staff API `GET /admin/carts` is protected by UserJwtAuthGuard + PermissionsGuard + CART_READ. Customer cart endpoints now require CustomerJwtAuthGuard and derive customer identity from JWT.
-   - Added CART_READ to the backend permission enum and ADMIN seed; two migrations add the enum and grant the permission to existing ADMIN users. Migrations have not been applied.
-8. **Discounts** — Next module
-   - Define discount rules first; implement schema/API/permissions/Admin UI as a coherent feature. Current Prisma discount model is empty.
-9. **Settings**
+   - Staff API `GET /admin/carts` is protected by UserJwtAuthGuard + PermissionsGuard + CART_READ. Customer cart endpoints require CustomerJwtAuthGuard and derive customer identity from JWT.
+   - Added CART_READ to the backend permission enum and ADMIN seed; migrations have not been applied.
+8. **Discounts** — Implemented; user verification pending
+   - Added coupon-code CRUD for percentage and fixed discounts, minimum order amount, optional percentage cap, validity dates, optional total usage cap and active state.
+   - Admin page includes search, status filter, create/edit and confirmed delete; backend endpoints enforce staff JWT and DISCOUNT_* permissions.
+   - Added Prisma schema and migrations, plus ADMIN permission seed. Migrations have not been applied.
+   - Coupon redemption, checkout application and usage-limit counting/enforcement are deferred; the configured cap is not yet enforced during order creation.
+9. **Settings** — Next module
    - Finish and verify general, shipping, notification, security and payment-gateway settings; ensure secrets are never returned to the browser.
 10. **Full Admin consistency and security audit**
     - Reconcile navigation/routes/permissions, backend guards, empty states, errors, responsive layouts and CRUD edge cases across all existing Admin modules.
@@ -64,3 +67,7 @@ After the Admin Panel is declared complete:
 ## Explicitly out of scope unless requested
 
 Google OAuth / Google Calendar is not an evidenced core CommerceOS requirement. Do not prioritize it unless the product owner explicitly requests it.
+
+### Discounts integration note
+- Discounts navigation is grouped under Marketing. The standalone Admin CRUD and backend configuration API are implemented; coupon redemption in carts/orders and usage-limit enforcement remain deferred.
+- User verification is still the gate before beginning Settings.

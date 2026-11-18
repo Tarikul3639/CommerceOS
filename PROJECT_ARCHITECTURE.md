@@ -52,7 +52,7 @@ Each app is a separate package/repository with its own `.git` directory. The thr
 - `prisma/schema.prisma` configures the generated client and PostgreSQL datasource.
 - Models are split into `prisma/models/*.prisma`: user/access, customer, catalog, product, variant, order/cart/returns, purchase/supplier/returns, payment/gateway config, system/audit/notifications/settings/banners.
 - Migrations live in `prisma/migrations`; seeds live in `prisma/seed`.
-- `discount.prisma` is currently empty (0 bytes).
+- `discount.prisma` defines coupon-code discounts (PERCENTAGE/FIXED), unique codes, minimum order threshold, optional percentage cap, validity dates, optional total usage cap and staff audit relations. Redemption/usage enforcement is not yet connected to order creation.
 
 ### Important backend observations
 - Authentication is split between `UserJwtAuthGuard` and `CustomerJwtAuthGuard`; permission checks are an additional `PermissionsGuard`.
@@ -87,7 +87,7 @@ Routes exist for activity logs, analytics, banners, brands, carts, categories, c
 - `PaymentsContent` now provides a paginated/searchable payment and refund transaction table with method/status/type filters and a lazy-loaded detail dialog. The backend payment list query supports payment type filtering and searches transaction reference, invoice number and order ID.
 - Gateway session creation, callback verification and refund settlement remain unimplemented; the Admin screen is intentionally read-only and does not imply gateway verification.
 - `ReturnsContent` provides a permission-aware, paginated/searchable order-return table with status filters, lazy-loaded details, and ORDER_UPDATE-gated approve/reject/complete actions. Backend decisions are staff-JWT protected: approve/reject only PENDING returns; complete only APPROVED returns. Approval checks cumulative approved/completed quantities against the ordered quantity using a serializable transaction. Rejection requires a reason and records actor/time. Completion records actor/time and restores stock only for tracked product variants in the same transaction. Refunds are not issued automatically; gateway refund settlement remains separate and unimplemented. A migration adds rejection/completion audit fields; it must be applied in the target database before using these endpoints.
-- The Carts dashboard is implemented as a read-only active-cart overview backed by a staff-protected paginated API. `CART_READ` exists in Admin and backend permission configuration; its migration must be applied before use. Discounts still has a navigation reference but no completed model/API/dashboard workflow.
+- The Carts dashboard is implemented as a read-only active-cart overview backed by a staff-protected paginated API. `CART_READ` exists in Admin and backend permission configuration; its migration must be applied before use. Discounts now has a staff-protected CRUD API and Admin coupon management screen; the new discounts migrations must be applied before use. Coupon redemption, checkout application and usage-limit enforcement remain deferred.
 - Admin product management appears much further along than order/payment/notifications/returns screens.
 - `src/proxy.ts` only checks cookie presence. Do not treat this as API authorization.
 - The backend Orders controller now uses `UserJwtAuthGuard` + `PermissionsGuard` with per-route ORDER_CREATE/READ/UPDATE permissions. Order status changes follow PENDING → CONFIRMED → PROCESSING → SHIPPED → DELIVERED; shipped/delivered orders cannot be cancelled.
@@ -130,3 +130,8 @@ The backend test inventory contains only `src/app.controller.spec.ts`; its asser
 
 ## 7. Session workflow
 Use `PROJECT_CONTEXT.md` as the fast handoff and this file for orientation. When working on a feature, inspect its exact controller/service/DTO/model/API/UI/tests and direct dependencies only. Update these docs after discoveries or material changes.
+
+### Discounts integration status (2026-11-19)
+- Discounts is registered in AppModule, backed by the Prisma Discount model and User creator/updater relations, with staff JWT + DISCOUNT_* permission checks and Admin RTK Query CRUD.
+- Admin navigation places Discounts under Marketing beside Banners, not Catalog.
+- The module is currently configuration/CRUD only: cart/order checkout does not yet apply coupon codes, and usageLimit is not counted or enforced. Do not describe the module as a complete redemption workflow.
