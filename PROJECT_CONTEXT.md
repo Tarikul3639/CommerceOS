@@ -22,15 +22,15 @@ Do not reread the entire codebase by default. Use this map, then inspect only th
 
 ## Current architecture at a glance
 - Backend has separate user/admin and customer authentication flows, cookie-based JWT access/refresh, role permissions, shared Prisma/mail/Cloudinary/audit infrastructure, catalog, inventory, purchasing, orders, carts, payments, gateway configuration, analytics, dashboard, settings, notifications and activity logs.
-- Admin has dashboard routes and feature folders for catalog, customers, users, purchases, returns, settings, analytics, payments and other operations. It uses Redux Toolkit Query.
+- Admin has dashboard routes and feature folders for catalog, customers, users, purchases, returns, carts, settings, analytics, payments and other operations. It uses Redux Toolkit Query.
 - Storefront route structure is present, but many tracked page and integration files are zero bytes. Its production build currently fails TypeScript because an account addresses page is not a module.
 - The admin production build and backend build pass in this audit; admin typecheck passes. Backend has only a trivial placeholder unit test; meaningful domain tests are absent.
 
 ## Highest-priority verified issues
-1. **API authorization is not consistently enforced.** The root module does not register a global authentication guard. The order controller has no guards; the cart add-item endpoint uses a hard-coded `CUSTOMER_ID`; admin product endpoints have no guards. Treat this as a security blocker before exposing the API.
+1. **API authorization is not consistently enforced.** The root module does not register a global authentication guard. The cart customer endpoints now use CustomerJwtAuthGuard and derive identity from the JWT; continue auditing the order and admin product controllers, which were previously found without guards. Treat remaining gaps as security blockers before exposing the API.
 2. **Storefront is not implemented yet.** Representative tracked routes and API/auth/store files are zero bytes; `pnpm build` fails on `src/app/(account)/account/addresses/page.tsx` because it is not a module.
 3. **Payment gateway execution is incomplete.** Provider adapter/client/config source files for bKash and SSLCommerz are zero bytes; the payment factory always throws; payment creation does not start a provider session. Gateway configuration CRUD exists but does not complete payment processing.
-4. **Admin has unfinished screens and route mismatches.** Emails now has a delivery-log UI and secured API; Employees remains a placeholder. Payments, returns and navigation gaps still require follow-up audit.
+4. **Admin has unfinished screens and route mismatches.** Orders, Payments, Returns, Notifications, Emails, Employees and Carts now have operational screens; Discounts remains incomplete, and a full route/permission/security consistency audit is still required.
 5. **Discount domain is incomplete.** `backend/prisma/models/discount.prisma` is zero bytes; discount permissions/enums and admin navigation references exist, but a working discount model/module/route was not found.
 6. **Backend environment example is stale.** Validation and Prisma config expect `DATABASE_URL`; `backend/.env.example` currently documents `PRISMA_DATABASE_URL`. Never read actual `.env*` secrets to investigate this.
 7. **Test coverage is inadequate.** Backend unit test currently contains an empty assertion; only one test suite exists. Add focused tests around auth/authorization, cart, orders, stock and payments.
@@ -196,4 +196,22 @@ Do not reread the entire codebase by default. Use this map, then inspect only th
 - Applied UserJwtAuthGuard and PermissionsGuard to the Users controller; create/list/detail/update/status/restore/delete routes now require the corresponding USER_CREATE/READ/UPDATE/DELETE permission. Existing SUPER_ADMIN-only status and restore role checks remain.
 - Verification: backend `pnpm exec tsc --noEmit` and `pnpm build` passed; Admin `pnpm typecheck` and `pnpm build` passed; `git diff --check` passed in both app repos.
 - No migrations, seed execution, database writes, commits or pushes. Existing unrelated dirty work in Admin/Backend was preserved.
-- Next Admin module: Carts. Wait for user verification before starting it.
+- Next Admin module: Discounts. Carts is implemented; wait for user verification before starting another module.
+
+### 2026-11-19 — Admin Carts module
+- Implemented the read-only Admin Carts overview at `/dashboard/carts`: paginated active-cart list, search by customer name/email/phone or product name, product-line count, total quantity, estimated merchandise value, last activity and a responsive details dialog with cart items and variant details.
+- Added staff-only `GET /admin/carts` with `UserJwtAuthGuard`, `PermissionsGuard` and `CART_READ`; results are limited to non-empty carts and expose only customer contact basics and cart/product data needed by the screen.
+- Added the backend `CART_READ` permission, ADMIN role seed assignment, and two migrations: add the enum value and grant it to existing ADMIN accounts. SUPER_ADMIN continues to bypass explicit permission rows.
+- Secured existing customer cart endpoints with `CustomerJwtAuthGuard` and replaced the hard-coded `CUSTOMER_ID` in add-item with `@CurrentCustomer('id')`.
+- Estimated values use Prisma Decimal arithmetic and current selling prices; the UI clearly states that the value excludes discounts, shipping and taxes and does not reserve stock. No Admin cart mutation actions were added.
+- Verification: Prisma format/generate passed; backend `pnpm exec tsc --noEmit` and `pnpm build` passed; Admin `pnpm typecheck` and `pnpm build` passed (route `/dashboard/carts` generated); backend/Admin `git diff --check` passed.
+- No migrations were applied, no seed was run, and no database was changed. Apply the two new CART_READ migrations before using the Admin endpoint. No commit or push was created.
+- Next Admin module: Discounts. Wait for user verification before starting it.
+
+### 2026-11-19 — Admin Carts development seed fixtures
+- Added `backend/prisma/seed/carts.seed.ts` and wired it into the main seed runner after Order Returns and Email fixtures.
+- Adds three deterministic development cart fixtures for the seeded customers Rahim, Karim and Nusrat, using the dedicated Order Returns test product/variant.
+- The seed is additive and rerunnable: if a customer already has a cart, it leaves that cart and its contents untouched. It never clears or overwrites existing customer carts.
+- The seed requires the existing customer seed and `seedOrderReturns()` to have created the shared test product/variant first.
+- Verification: pending.
+- The seed was not executed; no database was modified. Run the main seed only after confirming the intended development database and applying required migrations.

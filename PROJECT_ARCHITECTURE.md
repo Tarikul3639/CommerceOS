@@ -42,7 +42,7 @@ Each app is a separate package/repository with its own `.git` directory. The thr
 - `users`, `customers`, `permissions`: staff/customer management and role permissions.
 - `catalog`: products, product images/options/variants, brands and categories; separate admin/store product controllers.
 - `inventory/stocks`: stock reads and manual adjustments.
-- `carts`: customer cart CRUD.
+- `carts`: customer cart CRUD plus a staff-only, read-only Admin cart overview (`GET /admin/carts`) protected by `UserJwtAuthGuard`, `PermissionsGuard` and `CART_READ`.
 - `orders`: order lifecycle and order returns.
 - `purchases`, `purchase-return`, `suppliers`: supplier purchasing and return lifecycle.
 - `payments`, `payment-gateway-config`: payment records/refunds and gateway settings.
@@ -56,10 +56,10 @@ Each app is a separate package/repository with its own `.git` directory. The thr
 
 ### Important backend observations
 - Authentication is split between `UserJwtAuthGuard` and `CustomerJwtAuthGuard`; permission checks are an additional `PermissionsGuard`.
-- The inspected root module does not apply authentication globally. The inspected order controller has no guards; cart `POST /cart/items` uses the literal `CUSTOMER_ID` instead of the authenticated customer; the inspected admin product controller has no guards. Review every controller and apply correct route-level or global policies before public deployment.
+- The inspected root module does not apply authentication globally. The order controller and inspected admin product controller were previously found without guards and still require a security audit. Customer cart routes now use `CustomerJwtAuthGuard` and the authenticated customer ID; the Admin cart listing uses staff JWT + `CART_READ`. Review every remaining controller before public deployment.
 - Product store read controller is public by design; admin writes must not be.
 - Order creation uses a Prisma transaction, Decimal arithmetic, duplicate line validation, product/variant validation and conditional variant stock decrement. Stock is represented on ProductVariant.
-- Cart controller's add endpoint contains a Bengali TODO comment indicating customer ID should later come from JWT.
+- Customer cart add/get/update/remove/clear endpoints are now protected by `CustomerJwtAuthGuard`; customer identity is taken from `@CurrentCustomer('id')`. Admin cart listing is isolated in a separate staff-only controller to avoid mixing customer and staff authentication.
 - Payment persistence has idempotency key support and gateway configuration records, but execution is incomplete:
   - bKash and SSLCommerz adapter/client/config implementation files inspected are zero bytes.
   - `PaymentProviderFactory.get()` always throws “No verified provider adapter is configured”.
@@ -80,14 +80,14 @@ Each app is a separate package/repository with its own `.git` directory. The thr
 - `src/app/(dashboard)/dashboard/*`: route entrypoints.
 
 ### Feature coverage in route inventory
-Routes exist for activity logs, analytics, banners, brands, categories, customers, emails, employees, notifications, orders, payments, permissions, products, purchase returns, purchases, returns, settings, size guides, stock, suppliers and users.
+Routes exist for activity logs, analytics, banners, brands, carts, categories, customers, emails, employees, notifications, orders, payments, permissions, products, purchase returns, purchases, returns, settings, size guides, stock, suppliers and users.
 
 ### Important admin observations
 - `OrdersContent` has a paginated/searchable/filterable order table, detail dialog, status progression and cancellation workflow. `NotificationsContent` has a permission-aware inbox. `EmailsContent` now has a paginated delivery-log table, status filter and details dialog; backend logs actual mail attempts and exposes read-only endpoints behind `EMAIL_READ`. Retry is intentionally unsupported because no safe replay payload is stored. `EmployeesContent` now reuses the staff user contracts for a paginated manager/employee directory and employee creation via a dedicated `POST /users/employees` contract that restricts roles to MANAGER/EMPLOYEE. The backend user list supports a staff-only filter and all user-management routes enforce staff JWT plus USER_* permissions.
 - `PaymentsContent` now provides a paginated/searchable payment and refund transaction table with method/status/type filters and a lazy-loaded detail dialog. The backend payment list query supports payment type filtering and searches transaction reference, invoice number and order ID.
 - Gateway session creation, callback verification and refund settlement remain unimplemented; the Admin screen is intentionally read-only and does not imply gateway verification.
 - `ReturnsContent` provides a permission-aware, paginated/searchable order-return table with status filters, lazy-loaded details, and ORDER_UPDATE-gated approve/reject/complete actions. Backend decisions are staff-JWT protected: approve/reject only PENDING returns; complete only APPROVED returns. Approval checks cumulative approved/completed quantities against the ordered quantity using a serializable transaction. Rejection requires a reason and records actor/time. Completion records actor/time and restores stock only for tracked product variants in the same transaction. Refunds are not issued automatically; gateway refund settlement remains separate and unimplemented. A migration adds rejection/completion audit fields; it must be applied in the target database before using these endpoints.
-- Navigation links for Discounts and Carts were present, but corresponding dashboard routes/features were not found in the tracked file list.
+- The Carts dashboard is implemented as a read-only active-cart overview backed by a staff-protected paginated API. `CART_READ` exists in Admin and backend permission configuration; its migration must be applied before use. Discounts still has a navigation reference but no completed model/API/dashboard workflow.
 - Admin product management appears much further along than order/payment/notifications/returns screens.
 - `src/proxy.ts` only checks cookie presence. Do not treat this as API authorization.
 - The backend Orders controller now uses `UserJwtAuthGuard` + `PermissionsGuard` with per-route ORDER_CREATE/READ/UPDATE permissions. Order status changes follow PENDING → CONFIRMED → PROCESSING → SHIPPED → DELIVERED; shipped/delivered orders cannot be cancelled.

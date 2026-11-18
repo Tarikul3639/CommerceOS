@@ -1,6 +1,6 @@
 # CommerceOS — Development Roadmap
 
-Updated: 2026-11-18. Product-owner priority: Admin Panel must be completed before Storefront work begins.
+Updated: 2026-11-19. Product-owner priority: Admin Panel must be completed before Storefront work begins.
 
 ## Milestone A — Complete the Admin Panel (current)
 
@@ -23,9 +23,11 @@ Work module-by-module. Follow the established code structure in `AGENTS.md`; com
    - Added a staff-only directory for MANAGER and EMPLOYEE accounts, using the existing user domain rather than duplicating employee records.
    - Added employee creation with restricted MANAGER/EMPLOYEE role choices and a backend staff-only list filter.
    - Secured all user-management routes with staff JWT authentication and USER_CREATE/READ/UPDATE/DELETE permissions.
-7. **Carts**
-   - Decide whether this is an admin operational screen or remove unsupported navigation. Build only against a defined, secured backend contract.
-8. **Discounts**
+7. **Carts** — Implemented; user verification pending
+   - Read-only Admin overview of non-empty customer carts with pagination, customer/product search, line count, total quantity, estimated merchandise value, last activity and responsive item details.
+   - Staff API `GET /admin/carts` is protected by UserJwtAuthGuard + PermissionsGuard + CART_READ. Customer cart endpoints now require CustomerJwtAuthGuard and derive customer identity from JWT.
+   - Added CART_READ to the backend permission enum and ADMIN seed; two migrations add the enum and grant the permission to existing ADMIN users. Migrations have not been applied.
+8. **Discounts** — Next module
    - Define discount rules first; implement schema/API/permissions/Admin UI as a coherent feature. Current Prisma discount model is empty.
 9. **Settings**
    - Finish and verify general, shipping, notification, security and payment-gateway settings; ensure secrets are never returned to the browser.
