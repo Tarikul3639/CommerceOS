@@ -1,0 +1,10 @@
+[submodule "admin"]
+    path = admin
+    url = git@github.com:Tarikul3639/commerceos-admin.git
+
+[submodule "storefront"]
+    path = storefront
+    url = git@github.com:Tarikul3639/commerceos-storefront.git
+[submodule "docs"]
+	path = docs
+	url = git@github.com:Tarikul3639/commerceos-docs.git
