@@ -32,8 +32,11 @@ Work module-by-module. Follow the established code structure in `AGENTS.md`; com
    - Admin page includes search, status filter, create/edit and confirmed delete; backend endpoints enforce staff JWT and DISCOUNT_* permissions.
    - Added Prisma schema and migrations, plus ADMIN permission seed. Migrations have not been applied.
    - Coupon redemption, checkout application and usage-limit counting/enforcement are deferred; the configured cap is not yet enforced during order creation.
-9. **Settings** — Next module
-   - Finish and verify general, shipping, notification, security and payment-gateway settings; ensure secrets are never returned to the browser.
+9. **Settings** — Foundation implemented; completion pending product rules
+   - General company/branding/regional settings and payment-gateway configuration UI/API are present. General settings and gateway endpoints now require dedicated settings permissions.
+   - Gateway config writes reject credential-like keys and API responses strip legacy secret-like settings. Keep provider credentials in server-side environment variables/secret manager.
+   - Added `SETTING_READ/SETTING_UPDATE` migrations and ADMIN seed grants; migrations have not been applied.
+   - Shipping rates/free-shipping policy, store-wide notification preferences and security policy enforcement remain undefined/unimplemented. Define their business rules before adding persistence or runtime controls.
 10. **Full Admin consistency and security audit**
     - Reconcile navigation/routes/permissions, backend guards, empty states, errors, responsive layouts and CRUD edge cases across all existing Admin modules.
     - Add meaningful tests for critical business workflows and verify complete production builds.
@@ -70,4 +73,4 @@ Google OAuth / Google Calendar is not an evidenced core CommerceOS requirement. 
 
 ### Discounts integration note
 - Discounts navigation is grouped under Marketing. The standalone Admin CRUD and backend configuration API are implemented; coupon redemption in carts/orders and usage-limit enforcement remain deferred.
-- User verification is still the gate before beginning Settings.
+- User verified Discounts; Settings foundation is now underway. Settings completion is gated on product-owner decisions for shipping rates, notification preferences and security policies.
