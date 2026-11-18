@@ -44,6 +44,13 @@ Do not reread the entire codebase by default. Use this map, then inspect only th
 - Git status after checks was clean in backend, admin and storefront.
 - No source-code changes were made during the audit; only project documentation/context files are maintained at the monorepo root.
 
+## Current Admin-first milestone
+- The product owner explicitly set the sequence: finish the Admin Panel completely before starting Storefront. Do not implement Storefront features until Admin completion is confirmed.
+- Keep code structure aligned with the existing feature-first Admin and NestJS module conventions documented in `AGENTS.md`.
+- Complete one Admin module at a time, verify it, report the exact changes and checks, then stop for user review.
+- Start the next module only when the user explicitly asks.
+- Never commit or push unless the user explicitly instructs it.
+
 ## Working agreement
 - Check `git status --short` in the affected app before editing.
 - Never read, print, copy, or commit actual `.env*` values. Use `.env.example` only.
@@ -62,3 +69,107 @@ Do not reread the entire codebase by default. Use this map, then inspect only th
 - Identified API authorization gaps, incomplete storefront, incomplete payment adapters, incomplete discounts, admin placeholders and environment example mismatch.
 - No OAuth/Calendar implementation found in tracked backend source; Calendar is not an evidence-based next feature.
 - Next: address API authorization/security first, then finish a minimal customer storefront vertical slice and payment provider flow.
+
+### 2026-11-18 — Admin Orders module
+- Replaced the Orders heading placeholder with a feature-first RTK Query implementation: paginated/searchable order table, order/payment status filters, order detail dialog, fulfilment status progression and cancellation confirmation.
+- Added typed order contracts and endpoints under `src/features/orders/{api,types,components}`.
+- Protected backend order routes with user JWT authentication and ORDER_CREATE/READ/UPDATE permissions.
+- Enforced sequential order status transitions; disallowed cancellation after shipment or delivery; stock restoration remains transactional on allowed cancellation.
+- Verification: Admin `pnpm typecheck` passed; Admin `pnpm build` passed; backend `pnpm build` passed; `git diff --check` passed in both repos. Admin ESLint command is currently blocked by existing ESLint 10 / eslint-plugin-react incompatibility (`contextOrFilename.getFilename is not a function`).
+- Next: Payments module, then order returns/returns, notifications, emails, employees, carts/discounts and remaining Admin gap audit. Storefront remains deferred.
+
+
+### 2026-11-18 — Admin Payments module
+- Replaced the Payments placeholder with a permission-aware, paginated transaction table and lazy-loaded transaction details.
+- Added search by invoice number, order ID and transaction reference; filters for payment method, status and transaction type (PAYMENT/REFUND).
+- Added typed RTK Query endpoints and payment contracts in the existing feature-first structure.
+- Extended the backend payment query DTO/service with transaction type filtering and order-ID search. Existing staff JWT and ORDER_READ guards remain in force; no gateway or refund-settlement actions were added because provider verification/settlement is not implemented.
+- Verification: Admin `pnpm typecheck` passed; Admin `pnpm build` passed; backend `pnpm build` passed; backend `pnpm test --runInBand` passed (one trivial placeholder test only); `git diff --check` passed in both app repos.
+- No commits created. Working trees contain only the Payments changes; user review required before the next module.
+
+
+### 2026-11-18 — Admin Order Returns module
+- Replaced the empty ReturnsContent placeholder with a permission-aware, paginated/searchable order-return table, status filters and lazy-loaded return detail dialog.
+- Added typed RTK Query endpoints and return contracts under the existing feature-first structure; registered the OrderReturn cache tag.
+- Extended backend order-return search across return number, order invoice and customer name.
+- Secured order-return routes with UserJwtAuthGuard + PermissionsGuard: ORDER_CREATE for creating a return; ORDER_READ for list/detail.
+- No approve/reject/complete mutation was invented: current backend exposes no such lifecycle endpoint or decision business rules. Admin return management is read-only until those are specified and implemented.
+- Verification: Admin `pnpm typecheck` passed; Admin `pnpm build` passed; backend `pnpm build` passed; `git diff --check` passed in both app repos.
+- No commits or pushes created. Next planned Admin module: Notifications, but wait for the user's explicit instruction.
+
+
+### 2026-11-18 — Order Returns lifecycle decisions
+- Implemented staff-only approve, reject and complete endpoints guarded by UserJwtAuthGuard + PermissionsGuard + ORDER_UPDATE.
+- Approval is restricted to PENDING returns and validates cumulative APPROVED/COMPLETED quantities against each ordered item inside a serializable transaction; concurrent status changes are guarded by conditional updates.
+- Rejection is restricted to PENDING returns, requires a 3–500 character reason, and records rejection actor/time/reason.
+- Completion is restricted to APPROVED returns, records completion actor/time and restores tracked ProductVariant stock in the same transaction. Products without a variant have no stock counter to restore.
+- Added rejection/completion audit fields and relations to the Prisma schema plus migration `20261118220000_add_order_return_decisions`. Prisma client regenerated. Migration was not applied to any database.
+- Admin detail dialog now exposes permission-aware approve/reject/complete actions, rejection reason input and decision audit information. Completion explicitly does not issue a refund.
+- Verification: Prisma validate/generate passed; backend build passed on retry (first attempt hit a transient ENOTEMPTY while cleaning dist); Admin typecheck/build passed; backend test command passed only the existing trivial placeholder test; git diff --check passed in both apps.
+- No commits, pushes or database migrations were run. Existing uncommitted Order Returns changes were preserved.
+
+
+### 2026-11-18 — Order Returns test seed integration
+- Added `backend/prisma/seed/order-returns.seed.ts` as an exported, repeatable development fixture seed and wired it into the existing `prisma/seed/index.ts` runner.
+- The main seed runner now runs the existing user and customer seeds first (required fixture relations), then settings and Order Returns test fixtures. Other previously disabled seed steps remain disabled.
+- Creates/reuses a dedicated test category, product and tracked variant, then creates three delivered/paid test orders with return cases for PENDING approval, PENDING rejection and APPROVED completion.
+- Existing return fixtures are left untouched on reruns so a tested decision is not silently reset.
+- Verification: backend `pnpm exec tsc --noEmit` passed; `git diff --check` passed.
+- The seed was not executed and no database was changed. Apply the Order Returns migration before running the main seed command.
+
+
+### 2026-11-18 — Prisma environment loading priority
+- Updated `backend/prisma.config.ts` to load `.env.local` before `.env`; because dotenv does not override existing process variables by default, values in `.env.local` take precedence and `.env` fills only missing variables.
+- Verification: backend `pnpm exec prisma validate` passed and `git diff --check` passed.
+- No environment file contents were inspected or changed; no migration or database operation was run.
+
+
+### 2026-11-18 — Add dotenv package for Prisma config
+- Added `dotenv` as a direct backend dependency so TypeScript can resolve the import used by `prisma.config.ts`; updated `backend/package.json` and `backend/pnpm-lock.yaml`.
+- Verification: backend `pnpm exec prisma validate`, `pnpm exec tsc --noEmit` and `git diff --check` passed. Prisma validation confirms `.env.local` loaded before `.env`.
+- No migrations or database writes were run; no commits or pushes were created.
+
+### 2026-11-18 — Order Returns navigation and responsive dialog refinement
+- Added the Order Returns entry under the Admin Sales navigation group, linking to `/dashboard/returns` and gated by `ORDER_READ`.
+- Extracted return details/actions from the table column definition into `src/features/returns/components/return-details-dialog.tsx`; the columns file now focuses on table presentation.
+- Reworked the dialog into a responsive, viewport-bounded layout with a separately scrollable content area, compact responsive overview grid, stacked mobile item rows, and a footer that keeps decision controls accessible.
+- Kept approve/reject permission-gated; rejection still requires a reason. Added an explicit confirmation before completing a return and restoring tracked variant stock.
+- Verification: Admin `pnpm typecheck`, `pnpm build`, and `git diff --check` passed.
+- No database migration, seed, commit or push was run. Existing unrelated/previous Order Returns changes in the Admin working tree were preserved; review the full git status before committing.
+
+### 2026-11-18 — Nest Order navigation
+- Grouped Sales navigation into an expandable **Orders** parent with **All Orders** (`/dashboard/orders`) and **Returns** (`/dashboard/returns`) children.
+- Reused the existing nested-navigation renderer and existing `ORDER_READ` permission; no sidebar component changes were necessary.
+- Verification: Admin `pnpm typecheck`, `pnpm build`, and `git diff --check` passed.
+- No commit or push created.
+
+### 2026-11-18 — Nest Purchasing navigation
+- Grouped Purchasing navigation into an expandable **Purchases** parent with **All Purchases** (`/dashboard/purchases`) and **Returns** (`/dashboard/purchase-returns`) children.
+- Reused the existing nested-navigation renderer and `PURCHASE_READ` permission; no sidebar component changes were needed.
+- Verification: pending.
+- No commit or push created.
+
+### 2026-11-18 — Admin Notifications module
+- Replaced the Notifications placeholder with a permission-aware inbox using the existing notification API: paginated list, notification type filter, read/unread filter, unread count, mark-one-read, mark-all-read, detail view and confirmed delete.
+- Added typed notification contracts and RTK Query endpoints under `admin/src/features/notifications/{api,types}`; registered the Notification cache tag.
+- Added a responsive detail dialog with message, status, timestamps and related entity metadata. Internal notification links are rendered as navigation links only when they are root-relative; external/arbitrary links are displayed as text.
+- Protected all backend notification routes with `UserJwtAuthGuard`. Existing service queries/mutations scope records to the authenticated user's ID, preventing access to another user's notifications.
+- Backend currently has no mark-as-unread endpoint; Admin supports unread filtering and marking notifications as read, but does not pretend to support a reverse state transition.
+- Verification: Admin `pnpm typecheck` passed; Admin `pnpm build` passed and includes `/dashboard/notifications`; backend `pnpm build` passed; `git diff --check` passed in both app repositories.
+- No migrations, database writes, commits or pushes were run. Existing Order Returns and other pre-existing working-tree changes were preserved.
+- Next Admin module: Emails. Wait for explicit user instruction after their review.
+
+
+### 2026-11-18 — Notifications toolbar alignment
+- Moved the Notifications page's **Mark all** action into the shared DataTable toolbar via `toolbarActions`, matching the Orders/Payments table pattern.
+- Moved notification type and read-status filters into the same table toolbar via `toolbarFilters`; removed the standalone summary/filter card and page-header action.
+- Kept the unread count in the table description so the table has one consistent control area.
+- Verification: Admin `pnpm typecheck` and `git diff --check` passed.
+- No unrelated files, commits or pushes.
+
+### 2026-11-18 — Wire header notification control
+- Replaced the decorative, non-interactive header bell with a permission-aware notification popover backed by the existing Notifications RTK Query endpoints.
+- Header now fetches the latest five notifications, refreshes the list every 60 seconds, displays the live unread count badge, supports marking one/all as read, and navigates to a safe internal notification link or the Notifications inbox.
+- Added loading/empty states and a responsive, scrollable popover. Users without `NOTIFICATION_READ` do not trigger the notifications query or see the control.
+- Verification: Admin `pnpm typecheck`, `pnpm build`, and `git diff --check` passed.
+- No backend/API changes, database operations, commits or pushes.

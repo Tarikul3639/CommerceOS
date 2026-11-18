@@ -1,64 +1,60 @@
 # CommerceOS — Development Roadmap
 
-Updated: 2026-11-18 after repository audit.
+Updated: 2026-11-18. Product-owner priority: Admin Panel must be completed before Storefront work begins.
 
-## Priority 0 — API security and authorization hardening
-This should be the immediate next engineering task, before adding new product features.
+## Milestone A — Complete the Admin Panel (current)
 
-Observed reasons:
-- Root NestJS module does not register a global authentication guard.
-- The inspected Orders controller has no authentication/permission guards.
-- Cart `POST /cart/items` uses hard-coded `CUSTOMER_ID` instead of `@CurrentCustomer('id')` and a customer guard.
-- The inspected admin product controller has no user JWT or permission guards.
-- Admin proxy checks cookie presence only; backend must be the security boundary.
+Work module-by-module. Follow the established code structure in `AGENTS.md`; complete each module end-to-end across Admin UI and backend API where needed. After verification, report the work and stop for the user's review. Do not start the next module until the user explicitly asks. Never commit or push unless the user explicitly instructs it.
 
-Work plan:
-1. Inventory every controller and classify routes: public store reads, customer-only, authenticated staff, staff permission-gated, webhook.
-2. Apply correct JWT guards and permissions to each protected route; do not blanket-protect public catalog/auth/webhook endpoints.
-3. Replace hard-coded customer identity with the authenticated customer decorator and guard.
-4. Check ownership on every customer resource (cart, order, payment, profile).
-5. Add tests proving unauthenticated, wrong-role and cross-customer requests are rejected.
-6. Review audit context so authenticated actor identity is captured after guards execute.
+### Module order
 
-## Priority 1 — Build the customer storefront vertical slice
-Storefront is currently a scaffold: representative route/API/auth/store files are zero bytes and production build fails on the empty account addresses page.
+1. **Orders** — Completed in this session
+   - Admin list/search/pagination/status filters, detail view, fulfilment transitions and cancellation.
+   - Backend order-route JWT/permission enforcement, sequential status transitions and cancellation constraints.
+2. **Payments** — Admin transaction list/search/filters/details implemented; gateway execution and refund settlement remain deferred pending verified provider adapters/callbacks.
+3. **Order Returns** — Completed for the agreed workflow: PENDING → APPROVED or REJECTED; APPROVED → COMPLETED. Rejection reason and decision actors/timestamps are audited. Approval validates cumulative returned quantities; completion restores tracked variant stock transactionally. Refund execution remains separate and deferred until verified gateway refund support exists. Apply the new Prisma migration before using the decision endpoints.
+4. **Notifications**
+   - Admin list/detail/read/unread and supported notification actions; align with backend API.
+5. **Emails**
+   - Email log list/detail, status filters and retry only if backend exposes a safe retry operation.
+6. **Employees**
+   - Complete employee/staff management using existing users/roles/permissions contracts; avoid duplicating user management without a domain distinction.
+7. **Carts**
+   - Decide whether this is an admin operational screen or remove unsupported navigation. Build only against a defined, secured backend contract.
+8. **Discounts**
+   - Define discount rules first; implement schema/API/permissions/Admin UI as a coherent feature. Current Prisma discount model is empty.
+9. **Settings**
+   - Finish and verify general, shipping, notification, security and payment-gateway settings; ensure secrets are never returned to the browser.
+10. **Full Admin consistency and security audit**
+    - Reconcile navigation/routes/permissions, backend guards, empty states, errors, responsive layouts and CRUD edge cases across all existing Admin modules.
+    - Add meaningful tests for critical business workflows and verify complete production builds.
 
-Build in this order:
-1. Make every route file a valid module and restore a passing build.
+### Completion gate for every module
+
+- Inspect the matching backend controller/service/DTO/schema and neighboring Admin patterns before editing.
+- Use the established folder and naming conventions; no broad rewrites or new architectural style.
+- Implement real API integration, permission-aware actions, validation, loading/error/empty states and responsive behavior.
+- Run relevant typecheck/build/tests and review `git diff --check`.
+- Review the diff and report changed files and verification. Leave changes uncommitted unless the user explicitly asks for a commit.
+
+## Milestone B — Storefront (blocked until Milestone A is complete)
+
+After the Admin Panel is declared complete:
+1. Make all route files valid modules and restore a passing build.
 2. Implement API client, typed endpoint contracts, cookie/session auth and refresh behavior.
-3. Implement public home/catalog/category/product detail using existing `/store/products` endpoints.
-4. Implement customer register/login/verification and account state using `/auth/customer`.
-5. Implement cart using secured customer cart endpoints (after Priority 0).
-6. Implement checkout/order creation and payment UI only after order/customer contracts and payment workflow are verified.
-7. Implement customer account orders, profile and return workflows.
+3. Implement public home/catalog/category/product detail.
+4. Implement customer registration/login/verification and account state.
+5. Implement customer cart using secured cart endpoints.
+6. Implement checkout/order creation and payment UI after verifying the order/payment contracts.
+7. Implement account orders, profile and return workflows.
 
-## Priority 2 — Complete payment provider integration
-Current payment CRUD/configuration is not equivalent to a working gateway:
-- bKash and SSLCommerz adapter/client/config source files are empty.
-- PaymentProviderFactory always throws.
-- CreatePaymentService persists PENDING payments but does not call a gateway.
-- Provider callback/webhook verification is not complete.
+## Milestone C — Platform hardening and release readiness
 
-Before implementation: define provider credentials and secret management, session creation, callback signature verification, amount/currency matching, replay protection, idempotency, status transitions, refund behavior and tests. Never expose credentials in API responses or JSON settings.
+- Complete bKash/SSLCommerz provider sessions, callback/webhook signature verification, idempotency and refund flows.
+- Add domain and integration tests for auth, permissions, cart, orders, stock, payments, returns and mail.
+- Reconcile backend `.env.example` mismatch (`PRISMA_DATABASE_URL` vs code's `DATABASE_URL`) without exposing real environment values.
+- Add health/readiness checks, structured logs, rate limits, monitoring and deployment runbooks.
 
-## Priority 3 — Finish admin operations
-- Implement order list/detail/status/cancel workflows.
-- Implement payment list/details/refund workflows and distinguish verified gateway payments from manual cash collection.
-- Implement notifications, email log and employee pages.
-- Replace ReturnsContent null placeholder with a defined order-return view or remove the route if out of scope.
-- Reconcile Discounts and Carts nav entries with actual API/routes.
-- Confirm permission names are consistent across Prisma seed, backend enums and admin config.
+## Explicitly out of scope unless requested
 
-## Priority 4 — Discounts and business rules
-- Decide discount requirements and lifecycle.
-- Add Prisma model/migration/DTO/service/controller/permission seeds/admin UI only after business rules are agreed.
-- Ensure price calculation is server-authoritative and applied consistently in cart/order/payment.
-
-## Priority 5 — Quality, observability and deployment readiness
-- Add meaningful unit/integration/e2e tests for auth, permissions, cart, order, stock, payments, refunds and mail failure behavior.
-- Fix backend `.env.example` variable mismatch (`PRISMA_DATABASE_URL` vs code's `DATABASE_URL`).
-- Add health/readiness checks, structured logs, rate limits, webhook monitoring and backup/migration runbooks.
-- Run full CI checks after each milestone.
-
-## Explicitly not on the current roadmap
-Google OAuth / Google Calendar was not found in the tracked backend source and is not evidenced as a core CommerceOS requirement. Do not prioritize it unless the product owner explicitly requests an external calendar integration.
+Google OAuth / Google Calendar is not an evidenced core CommerceOS requirement. Do not prioritize it unless the product owner explicitly requests it.
