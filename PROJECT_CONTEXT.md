@@ -275,3 +275,32 @@ Do not reread the entire codebase by default. Use this map, then inspect only th
 - Remaining scope before Settings can be called complete: define shipping-rate/free-shipping policy and order calculation behavior; define store-wide notification preference model and delivery integration; define security policy requirements and wire them into authentication/session enforcement. These were not invented because no product rules or backend support exist yet.
 - Removed the Settings sidebar after user feedback; the Settings content now uses the full available width. Admin TypeScript check and `git diff --check` passed after this adjustment.
 - Next: user review of Settings foundation and confirmation of the missing shipping/notification/security policy requirements. Do not begin another module until explicit instruction.
+
+
+### 2026-11-19 — Settings: Shipping Settings implementation
+- Implemented district/city-based shipping zones with a configurable flat delivery rate per zone, active/inactive state, case-insensitive normalized uniqueness, and optional global free-shipping threshold (null disables it).
+- Backend: added ShippingSettings and ShippingZone Prisma models, migration 20261119130000_add_shipping_settings, DTOs, staff-JWT/SETTING_READ or SETTING_UPDATE-protected API at /shipping-settings and /shipping-settings/zones, and CRUD service validation.
+- Admin: replaced the Shipping placeholder with a responsive configuration screen for the free-shipping threshold and district/city zone create/update/delete, status and empty/loading/error states. API contracts and RTK Query endpoints added.
+- Important boundary: these values are persisted configuration only. They are not yet used to calculate order totals or checkout shipping; that integration is deferred until the customer checkout/address flow is implemented. No default Bangladesh zones or delivery prices were invented.
+- Verification: backend Prisma format/generate/validate passed; backend pnpm exec tsc --noEmit and pnpm build passed; Admin pnpm exec tsc --noEmit and pnpm build passed; git diff --check passed in both apps.
+- No migration was applied, no seed/database operation was run, and no commit or push was created. The unrelated pre-existing Admin/Backend working-tree changes were preserved.
+- Next: stop for user verification of Shipping Settings before beginning Notification Preferences.
+
+### 2026-11-19 — Shipping Settings card and dialog layout
+- Corrected the target page after user clarification: the requested card layout and Create/Update dialogs apply to `/dashboard/settings/shipping`, not Discounts.
+- Reverted the accidental Discounts page layout change from the immediately preceding turn; no Discounts page change remains from that request.
+- Updated `admin/src/features/settings/components/shipping/shipping-settings-content.tsx`: each district/city shipping zone is now shown as a responsive card with rate and active status; Create shipping zone and Update open the same responsive dialog form. Delete remains a separate confirmation dialog. The free-shipping threshold remains a dedicated inline setting.
+- Verification: Admin Prettier, `pnpm exec tsc --noEmit`, `pnpm build`, and `git diff --check` passed.
+- No backend/API/schema/database changes, migration, seed, commit or push. User verification pending.
+
+### 2026-11-19 — Refine Shipping Settings UI and feature structure
+- Refined the district/city shipping-zone cards with a restrained premium visual treatment: subtle primary gradient accent, elevated hover state, clear status badge, emphasized rate panel, and cleaner action footer. Updated the free-shipping threshold panel to use the shared Card primitives.
+- Refactored the former single large Shipping Settings component into focused components under the existing feature-first path `admin/src/features/settings/components/shipping/`:
+  - `shipping-settings-content.tsx` — page composition, query/mutations, permissions and notifications.
+  - `shipping-threshold-card.tsx` — free-shipping threshold form.
+  - `shipping-zone-list.tsx` — zone grid and empty state.
+  - `shipping-zone-card.tsx` — individual zone presentation/actions.
+  - `shipping-zone-form-dialog.tsx` — reusable create/update dialog and form state.
+- Kept API contracts and business behavior unchanged; no checkout calculation integration was added.
+- Verification: Admin Prettier, `pnpm exec tsc --noEmit`, `pnpm build`, and `git diff --check` passed.
+- No backend/database changes, migration, seed, commit or push. Other pre-existing working-tree changes were preserved. User verification pending.
