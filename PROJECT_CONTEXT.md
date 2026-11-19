@@ -1,6 +1,6 @@
 # CommerceOS — Persistent Project Context
 
-Last audited: 2026-11-18
+Last audited: 2026-11-19
 Workspace: `/home/tarikul3639/Desktop/CommerceOS`
 Projectron workspace ID: `bb35b0d3-e720-4bbb-9252-05e93925788d`
 
@@ -27,15 +27,15 @@ Do not reread the entire codebase by default. Use this map, then inspect only th
 - The admin production build and backend build pass in this audit; admin typecheck passes. Backend has only a trivial placeholder unit test; meaningful domain tests are absent.
 
 ## Highest-priority verified issues
-1. **API authorization is not consistently enforced.** The root module does not register a global authentication guard. The cart customer endpoints now use CustomerJwtAuthGuard and derive identity from the JWT; continue auditing the order and admin product controllers, which were previously found without guards. Treat remaining gaps as security blockers before exposing the API.
+1. **Admin API authorization audit is in progress.** The backend does not use a global authentication guard, so every protected controller must declare guards explicitly. The current audit added staff JWT + permission checks to dashboard, analytics, customers, stock, size guides, suppliers, Admin products/images/options/variants, notifications, purchases and purchase returns; catalog brand/category writes are guarded while their read endpoints remain public for storefront catalog use. Staff logout/logout-all/change-password now require staff JWT. Only store/products remains intentionally public among the controller files that lack guards. Continue reviewing every route's method-level decorators and public/customer boundaries before declaring authorization complete.
 2. **Storefront is not implemented yet.** Representative tracked routes and API/auth/store files are zero bytes; `pnpm build` fails on `src/app/(account)/account/addresses/page.tsx` because it is not a module.
 3. **Payment gateway execution is incomplete.** Provider adapter/client/config source files for bKash and SSLCommerz are zero bytes; the payment factory always throws; payment creation does not start a provider session. Gateway configuration CRUD exists but does not complete payment processing.
-4. **Admin has unfinished screens and route mismatches.** Orders, Payments, Returns, Notifications, Emails, Employees and Carts now have operational screens; Discounts remains incomplete, and a full route/permission/security consistency audit is still required.
-5. **Discount domain is incomplete.** `backend/prisma/models/discount.prisma` is zero bytes; discount permissions/enums and admin navigation references exist, but a working discount model/module/route was not found.
+4. **Admin completion is in progress.** Orders, Payments, Returns, Notifications, Emails, Employees, Carts and Discounts have implemented screens. Settings has General, Payment Gateway, Shipping, Notification Preferences and Security surfaces; user verification and the full Admin consistency/security audit remain.
+5. **Discount redemption is deferred.** Coupon configuration CRUD is implemented and user-verified. Cart/order checkout application, usage counting/enforcement and per-customer limits are not implemented.
 6. **Backend environment example is stale.** Validation and Prisma config expect `DATABASE_URL`; `backend/.env.example` currently documents `PRISMA_DATABASE_URL`. Never read actual `.env*` secrets to investigate this.
 7. **Test coverage is inadequate.** Backend unit test currently contains an empty assertion; only one test suite exists. Add focused tests around auth/authorization, cart, orders, stock and payments.
 
-## Current verified checks (2026-11-18)
+## Current verified checks (baseline: 2026-11-18; later feature checks are recorded in the Task Log)
 - Backend: `pnpm build` passed.
 - Backend: `pnpm test --runInBand` passed, but it ran only one trivial placeholder test.
 - Admin: `pnpm typecheck` passed.
@@ -47,8 +47,10 @@ Do not reread the entire codebase by default. Use this map, then inspect only th
 ## Current Admin-first milestone
 - The product owner explicitly set the sequence: finish the Admin Panel completely before starting Storefront. Do not implement Storefront features until Admin completion is confirmed.
 - Keep code structure aligned with the existing feature-first Admin and NestJS module conventions documented in `AGENTS.md`.
+- For each protected backend Admin route, enforce UserJwtAuthGuard and the matching PermissionsGuard permission; public storefront catalog reads and customer-auth flows must remain intentionally scoped.
 - Complete one Admin module at a time, verify it, report the exact changes and checks, then stop for user review.
 - Start the next module only when the user explicitly asks.
+- Update `PROJECT_CONTEXT.md`, `ROADMAP_NEXT.md` and `PROJECT_ARCHITECTURE.md` alongside every material implementation; do not leave documentation until a later audit.
 - Never commit or push unless the user explicitly instructs it.
 
 ## Working agreement
@@ -304,3 +306,111 @@ Do not reread the entire codebase by default. Use this map, then inspect only th
 - Kept API contracts and business behavior unchanged; no checkout calculation integration was added.
 - Verification: Admin Prettier, `pnpm exec tsc --noEmit`, `pnpm build`, and `git diff --check` passed.
 - No backend/database changes, migration, seed, commit or push. Other pre-existing working-tree changes were preserved. User verification pending.
+
+### 2026-11-19 — Settings Notification Preferences implementation and Security Settings completion
+- Notification Preferences: added the singleton `NotificationPreferences` Prisma model and migration `20261119131500_add_notification_preferences`; added Settings GET/PATCH API, request/response DTOs, Admin types/API and category-based in-app/email toggles.
+- Notification creation consults the matching in-app preference; operational email sending consults email preferences. Event producer call sites have not been comprehensively wired, so delivery integration is partial. Migration has NOT been applied.
+- Security Settings: added singleton `SecuritySettings` model, migration `20261119160000_add_security_settings`, DTOs, response DTO, Settings controller/service and Admin form/schema/types/API.
+- Security defaults: access token 15 minutes, standard refresh session 7 days, remember-me session 30 days, minimum password length 12, maximum failed login attempts 5, lockout 15 minutes. Staff token/refresh generation, remember-me refresh lifetime, failed-login lockout, password change and reset flows enforce the configured policies.
+- Admin Security form follows feature conventions with Zod schema in `features/settings/schemas`; Save appears only while values are dirty and hides again when values are reverted.
+- Verification: Prisma format/generate/validate and backend `npm run build` passed; Admin `npm run build` passed after moving schema to the shared `schemas/` folder.
+- Both migrations remain unapplied; no database migration or seed was run.
+- Security implementation was committed at user request: Admin `b68018f`, Backend `c4113ee`, root submodule update `9f78fa6`. No remote push.
+- Next: continue the Full Admin consistency/security audit per the product owner's explicit priority; Settings end-to-end verification remains pending.
+
+### 2026-11-19 — Full Admin consistency/security audit (batch 1: route authorization and permission catalog)
+- Added staff JWT authentication and DASHBOARD_READ / ANALYTICS_READ permission checks to all Dashboard and Analytics endpoints.
+- Reconciled the Prisma Permission enum with the Admin permission catalog, adding missing Customer, Category, Brand, Product Restore, Supplier, Cart and Notification permissions. Added ordered enum/grant migrations: 20261119170000_add_dashboard_analytics_permissions, 20261119170100_grant_dashboard_analytics_permissions, 20261119170200_sync_admin_permission_catalog, 20261119170300_grant_admin_permission_catalog.
+- Updated permission seed assignments for ADMIN/MANAGER/EMPLOYEE and completed the Admin permission-group matrix (Dashboard, Analytics, Brands, Carts, Activity Logs, Emails, Notifications, Settings, Product Restore). Size Guides navigation now requires PRODUCT_READ.
+- Added route-level staff JWT + permission enforcement to Customer, Stock, Size Guides, Supplier, Admin Product, Product Image, Product Option, Product Variant and Notification controllers. Brand/Category create/update/delete now require staff JWT and matching permissions; GET catalog endpoints intentionally remain public for storefront use.
+- Secured all Purchase and Purchase Return list/detail/mutation endpoints with staff JWT and the matching PURCHASE_* permissions.
+- Secured staff logout, logout-all and change-password routes with UserJwtAuthGuard. Customer auth already had guards on authenticated customer operations.
+- Permissions role path params now use ParseEnumPipe; attempts to mutate the SUPER_ADMIN role permission set are rejected.
+- Verification: Prisma format/validate/generate passed; backend npm run build passed; Admin npm run build passed; backend and Admin git diff --check passed. No tests or live HTTP authorization probes have been run yet.
+- New Prisma migrations have NOT been applied; role grants require applying migrations in timestamp order. No seed or database command was run.
+- Next: audit payment/refund boundaries, product/catalog service ownership and remaining Admin permission coverage; then address purchase inventory modeling with an explicit design.
+### 2026-11-19 — Full Admin consistency/security audit (batch 4: purchasing and purchase-return invariants)
+- Purchase creation now rejects empty line items, negative unit prices, negative discount/tax and negative totals. Existing duplicate-product, supplier and product-reference checks remain.
+- Purchase updates now use a conditional PENDING-only updateMany inside the existing transaction, so a purchase that changes state concurrently cannot be updated after leaving PENDING. Cancellation now also performs a conditional PENDING-only update to prevent stale-read state overwrites.
+- Purchase-return approval now performs its cumulative approved/completed quantity check and status transition in a Serializable transaction to prevent concurrent approvals from oversubscribing a purchase item's returnable quantity.
+- Verification: backend production build passed; backend Jest suite passed 14 tests across 7 suites. No database migration was needed for this batch.
+- Critical pre-existing workflow blocker discovered: ReceivePurchaseService intentionally always throws because PurchaseItem references Product, not ProductVariant, and cannot safely increment variant inventory. Consequently purchases cannot reach RECEIVED through the normal API, so CreatePurchaseReturnService's RECEIVED-only prerequisite makes purchase-return creation unreachable in the current workflow. Purchase-return completion also lacks a safe variant-level stock adjustment. This requires a product/inventory data-model decision before end-to-end purchase returns can be declared complete; no unsafe stock behavior was invented.
+- Payment audit: customer idempotency responses now verify order ownership; customer IDs are no longer written into the staff User foreign key. Manual settlement is CASH-only and conditional from PENDING; refunds link to original payments and use Serializable balance checks. Backend Jest: 17 tests passing. Gateway session/callback verification and refund settlement remain deferred pending verified provider workflows.
+### 2026-11-19 — Full Admin consistency/security audit (batch 6: product inventory boundaries and product-page permissions)
+- Removed stock mutation from product variant create/update DTOs, services and Admin variant editor. New variants start at the Prisma default of zero stock; stock quantities are changed only through the STOCK_UPDATE-protected Stock module, closing a PRODUCT_UPDATE-to-stock permission bypass.
+- Stock adjustment now uses an atomic increment with a stock floor inside a Serializable transaction, rejects zero adjustments, returns a conflict for serialization races and records the acting staff user with before/after quantities.
+- Product variant and product deletion now reject removal while any variant has positive stock; inventory must be reduced to zero through the Stock module before deletion, preventing hidden/trapped stock. Product option variant generation is capped at 500 combinations to prevent unbounded record creation from a single request.
+- Added permission-aware read/create/update gates and query skipping for Products list/details/create/update pages. Removed broken links from product rows to category/brand/size-guide detail routes that do not exist; these cells now render as plain labels.
+- Added stock adjustment tests. Backend Jest now passes 21 tests across 9 suites; backend production build and Admin production build both pass.
+
+### 2026-11-19 — Full Admin consistency/security audit (batch 7: catalog audit attribution and route correctness)
+- Product create/update/delete/restore, product-image add/update/delete, product-option create/update/delete, product-variant create/update/delete and generated-variant actions now record the authenticated staff actor in Activity Logs.
+- Product image update requires imageUrl and Cloudinary publicId to be supplied together, preventing mismatched asset references. Image update/delete lookups are constrained to non-deleted parent products.
+- Removed ParseUUIDPipe from Product Image IDs because the resource IDs are not UUIDs; the prior pipe rejected valid persisted identifiers.
+- Product create/update now reject soft-deleted category and brand references. Product and variant deletion reject positive stock; stock must first be reduced to zero through the dedicated Stock module, avoiding inaccessible inventory.
+- Admin Products list/details/create/update and Purchase Create/Permissions pages now show permission-denied states and skip protected queries when the user lacks the required permission. Removed the non-existent Storefront product link from Admin details until Storefront routes exist.
+- Verification: backend production build passed; backend Jest 21/21 passed across 9 suites. Admin production build had passed after product permission gating; re-run once final Admin permission changes are complete. No migrations or database operations were run.
+- Next: continue with category/brand/supplier/customer service invariants, navigation/route coverage and remaining action-level permission gaps.
+- Next: audit payment/refund boundaries, product/catalog service ownership and remaining Admin permission coverage; then address purchase inventory modeling with an explicit design.
+
+### 2026-11-19 — Full Admin consistency/security audit (batch 3: staff account privilege boundaries)
+- Staff account creation now allows ADMIN-role creation only by SUPER_ADMIN. ADMIN users can create MANAGER/EMPLOYEE accounts through the standard and employee workflows.
+- Staff account updates now prevent non-SUPER_ADMIN users from editing ADMIN accounts or assigning the ADMIN role; self-role changes are rejected. SUPER_ADMIN records remain immutable through the normal user update service.
+- Staff account reads no longer expose SUPER_ADMIN details to lower roles, and the staff list excludes SUPER_ADMIN rows for non-SUPER_ADMIN requesters.
+- Staff deletion now prevents self-deletion and prevents non-SUPER_ADMIN users from deleting ADMIN accounts. Both soft and permanent deletion paths record the acting user; soft deletion also revokes all active refresh sessions.
+- Staff status changes revoke active refresh sessions when deactivating/suspending accounts. The status DTO now permits only ACTIVE, INACTIVE and SUSPENDED; deletion must use the dedicated delete workflow.
+- Staff refresh-token rotation now reloads the active account and uses current database identity/role rather than stale refresh-token claims. Password change/reset already revoke active refresh tokens; JWT strategies also reject inactive accounts.
+- Admin UI role choices now restrict ADMIN creation/assignment to SUPER_ADMIN; user actions hide status/restore actions from non-SUPER_ADMIN users and protect privileged account rows. Create/update/delete/read actions are permission-aware.
+- Added focused staff-account policy tests. Backend Jest now passes 14 tests across 7 suites; backend build passes. Admin production build passed before this last backend-only batch; re-run final Admin build after remaining UI edits.
+- No migrations applied, no seed/database mutation run, and no commits/pushes created.
+- Next: continue auditing purchase/return state invariants, payment/refund boundaries, product/catalog service ownership and remaining UI permissions; add tests for account session revocation and critical transitions.
+
+### 2026-11-19 — Full Admin consistency/security audit (batch 2: account validation and permission-aware Admin UI)
+- Staff JWT strategy now reloads the current staff record on every authenticated request, rejects missing/inactive/suspended/deleted accounts, and uses the current database role/name/email instead of trusting stale role claims.
+- Customer JWT strategy now reloads the current customer record and rejects missing/inactive/suspended/deleted accounts. CurrentCustomer decorator now reads Passport's request.user payload; it previously read request.customer, which the guard/strategy never populated.
+- Added focused tests for both JWT strategies and PermissionsGuard. Backend Jest suite now passes 10 tests across 4 suites; backend build passes.
+- Added a reusable PermissionDenied state and permission-aware read/create/action gating for Brands, Categories, Customers, Users, Employees, Size Guides, Dashboard and Analytics. Restricted pages skip their protected queries when the user lacks read permission. Brand/category catalog GET endpoints remain public for storefront use, while write actions are hidden unless authorized.
+- User actions now hide update/status/delete/restore operations based on USER_* grants; customer actions follow CUSTOMER_* grants; size guide actions follow PRODUCT_* grants. Role permission editor hides update actions unless PERMISSION_UPDATE is present and never offers editing SUPER_ADMIN.
+- Verification: Admin production build passed; backend Jest 10/10 passed and backend production build passed. Both app git diff --check checks passed after the batch.
+- No migrations applied, no seed or database mutation run, and no commits/pushes created.
+- Next: finish category/brand/supplier/customer service invariants, remaining navigation/action permission checks and a full Admin route/API consistency sweep.
+
+### 2026-11-19 — Full Admin consistency/security audit (batch 8: customer, category, brand and supplier lifecycle)
+- Category, Brand, Supplier and Customer create/update/delete/restore mutations now attribute the authenticated staff actor in Activity Logs. Customer updates now record before/after profile data; customer soft and hard deletes are attributed.
+- Customer list filtering now supports DELETED customers using deletedAt, so the existing restore action can actually find deleted records. Customer detail lookup can retrieve soft-deleted records for authorized Admin review.
+- Customer soft deletion revokes active customer refresh sessions and removes outstanding password-reset/email-verification tokens. Customer email changes invalidate existing verification and password-reset tokens atomically.
+- Customer, Brand and User avatar/image updates now require the URL and Cloudinary public ID to be supplied or removed together. Replaced customer/brand/user assets are deleted only after the database update and activity record succeed.
+- Verification: backend build passed; backend Jest 26/26 passed across 11 suites. Admin build remains passing from the previous UI batch. No migrations or database operations were run.
+
+### 2026-11-19 — Full Admin consistency/security audit (batch 9: staff/customer authentication lifecycle)
+- Admin-created staff accounts now receive a password-setup invitation link backed by a one-time password-reset token. The welcome email clearly explains setup and expiry; completing setup sets isVerified=true, so newly created employees can actually sign in.
+- Staff/customer forgot-password flows no longer reveal whether an email exists; only active accounts receive reset messages. Previous unused reset tokens are invalidated when issuing a new token.
+- Staff/customer password-reset and email-verification tokens are consumed conditionally and transactionally, preventing concurrent replay. Reset flows require active accounts and revoke all existing refresh sessions; staff reset also verifies the email and clears lockout counters.
+- Staff/customer email-verification flows reject inactive/deleted accounts and consume tokens once. Staff/customer account email changes invalidate prior verification/reset tokens.
+- Staff and customer refresh-token consumption is now atomic, preventing two concurrent requests from reusing the same refresh token. Fixed CustomerRefreshTokenService's reversed bcrypt compare arguments, which previously made customer logout token validation fail.
+- Settings General and Payment Gateway pages now gate reads by SETTING_READ, skip protected queries without permission, and disable/hide mutations unless SETTING_UPDATE is granted. Payment Gateway cards, toggles, empty-state add actions and dialogs are read-only for users without update permission.
+- Admin production build passed after these settings permission changes.
+- Staff refresh rotation now consumes the old session and creates the replacement in one Serializable transaction after rechecking active/verified account state. Initial staff/customer login token persistence also rechecks the current password hash inside a Serializable transaction, preventing a login verified against a stale password from creating a session after password reset. UserJwtStrategy now rejects unverified staff sessions.
+- Backend Jest remains 26/26 across 11 suites; backend production build passed.
+
+### 2026-11-19 — Full Admin consistency/security audit (batch 12: role-permission escalation boundary)
+- Role permission assignment is now SUPER_ADMIN-only at the service boundary; a non-SUPER_ADMIN actor receives Forbidden even if they hold PERMISSION_UPDATE. The Admin edit action is shown only to SUPER_ADMIN, while role permission viewing remains available to PERMISSION_READ users.
+- `/permissions/me` now requires staff authentication but not PERMISSION_READ, so every authenticated staff account can load its own effective permissions without needing the permission-management read privilege. Role listing/details remain PERMISSION_READ-protected.
+- Added tests for non-SUPER_ADMIN rejection and SUPER_ADMIN updates. Backend Jest: 28/28 across 12 suites; backend production build and Admin production build pass.
+
+### 2026-11-19 — Full Admin consistency/security audit (batch 13: transactional workflow audit trails)
+- CreateActivityLogService now accepts an optional Prisma transaction client, allowing critical state changes and their audit records to commit or roll back together.
+- Order status transitions now use conditional Serializable transactions and record the acting staff user. Order cancellation atomically changes status, restores tracked variant stock and writes its audit record.
+- Purchase update/cancel/delete and purchase-return create/approve/reject/complete/delete now record the acting staff user; status changes and delete audit records are transactional. Payment status changes and refund creation also write audit records inside their Serializable transactions.
+- Product deletion now requires zero stock and no cart/order references; variant deletion requires zero stock and no cart/order references. Product options cannot be deleted while variants use them, and option type cannot change while variants depend on it. These rules protect later cancellation/return stock restoration and historical variant attributes.
+- Purchase receipt remains intentionally blocked because PurchaseItem has no product-variant reference; do not claim purchase returns change inventory until variant-linked receiving is implemented.
+- Verification: backend build passed; backend Jest 28/28 across 12 suites. No migrations or database operations were run.
+
+### 2026-11-19 — Full Admin consistency/security audit (batch 14: payment/order settlement consistency)
+- Paid orders can no longer be cancelled while refund settlement is unsupported; the Admin cancellation action is hidden for PAID orders and the backend independently rejects cancellation if either order.paymentStatus or a paid payment transaction indicates settlement.
+- Manual payment status updates now prevent multiple PAID payment transactions for one order and recalculate order.paymentStatus across all PAYMENT transactions, so failing/cancelling another pending attempt cannot overwrite an existing PAID state.
+- Added tests for duplicate paid transactions and preserving paid order state. Backend Jest: 30/30 across 12 suites; backend and Admin production builds pass. No migrations or database operations were run.
+- Staff login now uses a generic invalid-credentials response for unknown emails. Staff forgot-password also uses a generic response for unknown/inactive accounts.
+- Added invitation and refresh-token consumption tests. Backend Jest: 26/26 passed across 11 suites; backend production build passed. No database migrations or live mail delivery were run.
+
+

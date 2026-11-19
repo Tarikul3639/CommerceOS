@@ -1,80 +1,57 @@
 # CommerceOS — Development Roadmap
 
-Updated: 2026-11-19. Product-owner priority: Admin Panel must be completed before Storefront work begins.
+Updated: 2026-11-19. Product-owner priority: finish the Admin Panel before starting Storefront.
 
 ## Milestone A — Complete the Admin Panel (current)
 
-Work module-by-module. Follow the established code structure in `AGENTS.md`; complete each module end-to-end across Admin UI and backend API where needed. After verification, report the work and stop for the user's review. Do not start the next module until the user explicitly asks. Never commit or push unless the user explicitly instructs it.
+Work one module at a time. After implementation, run relevant checks and preserve user changes. For the Full Admin consistency/security audit, the product owner explicitly requested continuous sequential progress across audit areas without pausing between them; other modules still follow the normal user-verification gate. Never commit or push unless explicitly requested.
 
-### Module order
+### Module status and remaining order
 
-1. **Orders** — Completed in this session
-   - Admin list/search/pagination/status filters, detail view, fulfilment transitions and cancellation.
-   - Backend order-route JWT/permission enforcement, sequential status transitions and cancellation constraints.
-2. **Payments** — Admin transaction list/search/filters/details implemented; gateway execution and refund settlement remain deferred pending verified provider adapters/callbacks.
-3. **Order Returns** — Completed for the agreed workflow: PENDING → APPROVED or REJECTED; APPROVED → COMPLETED. Rejection reason and decision actors/timestamps are audited. Approval validates cumulative returned quantities; completion restores tracked variant stock transactionally. Refund execution remains separate and deferred until verified gateway refund support exists. Apply the new Prisma migration before using the decision endpoints.
-4. **Notifications**
-   - Admin list/detail/read/unread and supported notification actions; align with backend API.
-5. **Emails** — Completed
-   - Paginated email delivery log list/detail and status/search filters.
-   - Centralized send-attempt logging with PENDING/SENT/FAILED states and safe template summaries.
-   - Staff JWT + EMAIL_READ permission; retry intentionally omitted because no safe replayable payload exists.
-6. **Employees** — Completed
-   - Added a staff-only directory for MANAGER and EMPLOYEE accounts, using the existing user domain rather than duplicating employee records.
-   - Added employee creation with restricted MANAGER/EMPLOYEE role choices and a backend staff-only list filter.
-   - Secured all user-management routes with staff JWT authentication and USER_CREATE/READ/UPDATE/DELETE permissions.
-7. **Carts** — Implemented and user-verified
-   - Read-only Admin overview of non-empty customer carts with pagination, customer/product search, line count, total quantity, estimated merchandise value, last activity and responsive item details.
-   - Staff API `GET /admin/carts` is protected by UserJwtAuthGuard + PermissionsGuard + CART_READ. Customer cart endpoints require CustomerJwtAuthGuard and derive customer identity from JWT.
-   - Added CART_READ to the backend permission enum and ADMIN seed; migrations have not been applied.
-8. **Discounts** — Implemented; user verification pending
-   - Added coupon-code CRUD for percentage and fixed discounts, minimum order amount, optional percentage cap, validity dates, optional total usage cap and active state.
-   - Admin page includes search, status filter, create/edit and confirmed delete; backend endpoints enforce staff JWT and DISCOUNT_* permissions.
-   - Added Prisma schema and migrations, plus ADMIN permission seed. Migrations have not been applied.
-   - Coupon redemption, checkout application and usage-limit counting/enforcement are deferred; the configured cap is not yet enforced during order creation.
-9. **Settings** — Foundation implemented; complete in this explicit order
-   1. **Shipping Settings** — Implemented district/city-based zones with configurable flat rates, active/inactive state and an optional global free-shipping threshold. Admin CRUD and protected backend API are in place; user verification is pending. Checkout/order-total calculation remains deferred until the customer checkout/address flow is implemented.
-   2. **Notification Preferences** — Define store-wide email/in-app notification categories, enabled states and delivery behavior; then implement persistence, API, Admin UI and integration with notification/email delivery.
-   3. **Security Settings** — Define session lifetime, password rules, login-attempt/lockout behavior and any other required controls; then implement persisted configuration and enforce it in authentication/session flows.
-   4. **Full Settings verification** — Verify General, Payment Gateways, Shipping, Notification Preferences and Security end-to-end; check permissions, validation, loading/error/empty states, responsive UI, backend enforcement, migrations and production builds.
-   - General company/branding/regional settings and payment-gateway configuration UI/API are present. General settings and gateway endpoints now require dedicated settings permissions.
-   - Gateway config writes reject credential-like keys and API responses strip legacy secret-like settings. Keep provider credentials in server-side environment variables/secret manager.
-   - Added `SETTING_READ/SETTING_UPDATE` migrations and ADMIN seed grants; migrations have not been applied.
-   - Shipping, notification and security policy rules are not yet defined or implemented. Confirm each policy with the product owner before adding persistence or runtime controls.
-10. **Full Admin consistency and security audit**
-    - Reconcile navigation/routes/permissions, backend guards, empty states, errors, responsive layouts and CRUD edge cases across all existing Admin modules.
-    - Add meaningful tests for critical business workflows and verify complete production builds.
+1. **Orders** — Implemented; backend staff authentication/permissions, status progression and cancellation constraints are in place.
+2. **Payments** — Admin transaction list/search/filters/details implemented. Provider session creation, callback/webhook verification and refund settlement remain deferred.
+3. **Order Returns** — Agreed lifecycle implemented: PENDING → APPROVED/REJECTED; APPROVED → COMPLETED. Approval validates cumulative quantities; completion restores tracked variant stock transactionally. Refund execution remains deferred.
+4. **Notifications** — Admin inbox list/detail, type/read filters, unread count, mark-one/all-read and delete are implemented. Backend notification records are user-scoped and routes are staff-authenticated. No mark-unread endpoint exists.
+5. **Emails** — Implemented: searchable/paginated delivery logs, details, status filters and centralized PENDING/SENT/FAILED send-attempt logging. Retry is intentionally unavailable because safe replay payloads are not retained.
+6. **Employees** — Implemented using the existing staff user domain, restricted MANAGER/EMPLOYEE creation and staff-protected user-management routes.
+7. **Carts** — Implemented and user-verified: read-only Admin active-cart overview; customer cart APIs use customer JWT identity; Admin overview uses staff JWT + CART_READ.
+8. **Discounts** — Implemented and user-verified: percentage/fixed coupon CRUD, search/status filter, create/edit/delete, validation and staff permission checks. Coupon redemption/checkout application and usage-limit enforcement are deferred.
+9. **Settings** — Implemented; user verification is pending. Verify in this order:
+   1. **Shipping Settings** — District/city zones, flat rates, active/inactive state, optional global free-shipping threshold; Admin CRUD and protected backend API. Checkout/order-total integration is deferred.
+   2. **Notification Preferences** — Store-wide in-app/email category toggles persisted through Settings API and Admin UI. Notification creation and operational email sending consult the relevant preferences. Event producer call sites are not comprehensively wired, so do not claim complete event delivery integration.
+   3. **Security Settings** — Persisted security policy and Admin form. Defaults: access token 15 minutes, standard refresh session 7 days, remember-me session 30 days, minimum password length 12, maximum failed login attempts 5, lockout 15 minutes. Enforced in staff token/session and login/password flows. Admin save action appears only when the form is dirty.
+   4. **Full Settings verification** — Verify General, Payment Gateway, Shipping, Notification Preferences and Security end-to-end, including permissions, validation, loading/error states, responsive UI, runtime enforcement and migrations.
+   - Payment Gateway configuration is part of the existing Settings module, not a separate backend module. Naming is `payment-gateway`; routes use `/settings/payment-gateway`. Credential-like keys are rejected on writes and secret-like legacy settings are stripped from responses. Provider credentials remain server-side environment/secret-manager values.
+   - Relevant Prisma migrations have been created but NOT applied. Confirm migration status before using these features against a database.
+10. **Full Admin consistency and security audit** — IN PROGRESS by explicit product-owner priority. Work through one audit area at a time without waiting for Settings verification between areas. Batch 1: route authorization and permission catalog completed; Dashboard/Analytics, customer, stock, size-guide, supplier, product, notification, purchase and purchase-return routes protected; brand/category writes protected; staff session endpoints secured. Batch 2: staff/customer JWTs revalidate active database accounts and current staff roles; CurrentCustomer identity extraction fixed; permission-aware page/action gating added to audited Admin screens; guard/JWT strategy tests added. Batch 3: SUPER_ADMIN-only ADMIN account management, no self-role change/self-delete, SUPER_ADMIN privacy, refresh-token revocation on deactivation/deletion, current-role refresh rotation and staff-management tests. Batch 4: purchase financial input validation, conditional PENDING-only update/cancel and Serializable purchase-return approval quantity checks. Backend tests: 14 passing. Critical finding: purchase receiving is deliberately blocked because purchase items are product-linked rather than variant-linked; purchase returns require RECEIVED purchases and cannot currently be created through the normal flow. Variant-level purchase/stock modeling is a required design decision. Batch 5: payment idempotency responses verify customer order ownership; customer IDs are no longer written into the staff User foreign key; manual payment settlement is CASH-only and conditional from PENDING; refunds link to original payments and use Serializable balance checks. Backend Jest: 17 tests passing. Gateway settlement/refund execution remains deferred pending verified provider workflows. Batch 6: removed stock writes from product variant CRUD and routed all stock changes through STOCK_UPDATE; stock adjustments are atomic/Serializable and reject negative balances; variant/product deletion is blocked while stock is positive; variant generation capped at 500; Products pages now gate reads/actions by permission and broken category/brand/size-guide links were removed. Backend Jest: 21 tests passing; backend/Admin production builds pass. Batch 7: catalog product/image/option/variant mutations now record the staff actor; image URL/publicId updates are paired; invalid UUID parsing removed from image IDs; product/category/brand references reject soft-deleted records; product/variant deletion is blocked while stock remains; Products, Purchase Create and Permissions pages now gate reads/actions. Backend Jest: 21/21 and backend build pass. Batch 8: category/brand/supplier/customer mutations now attribute the acting staff user; customer deleted records can be listed/restored; customer soft deletion revokes sessions and clears outstanding reset/verification tokens; email changes invalidate prior tokens; avatar/image URL and Cloudinary public ID updates are paired. Batch 9: staff invitation now sends a one-time password setup link; staff/customer forgot-password is non-enumerating; reset and verification tokens are single-use and active-account-bound; reset revokes sessions; refresh/logout token consumption is atomic and customer bcrypt argument order is fixed. Backend Jest: 26/26 across 11 suites; backend build passes. Batch 10: General Settings, Notification Preferences, Shipping, Security and Payment Gateway pages gate reads with SETTING_READ, skip protected queries without permission and hide/disable mutations without SETTING_UPDATE; gateway cards, toggles, empty states and dialogs are read-only for non-editors. Admin production build passes. Batch 11: staff refresh rotation now atomically consumes old token and creates replacement in one Serializable transaction; login token persistence rechecks account status and password hash to close password-reset races; UserJwtStrategy requires verified staff accounts. Backend Jest: 26/26 across 11 suites and backend build pass. Batch 12: role-permission assignment is SUPER_ADMIN-only at the service boundary; Admin edit action is SUPER_ADMIN-only; `/permissions/me` requires authentication but not PERMISSION_READ so all staff can bootstrap their own permission state. Backend Jest: 28/28 across 12 suites; backend and Admin builds pass. Batch 13: CreateActivityLogService can write through the caller transaction; order transitions/cancellations, purchase changes, purchase-return actions and payment status/refund creation now record actor audit entries atomically. Product/variant deletion and option removal/type changes are blocked when stock or cart/order/variant references could damage history or stock restoration. Purchase receiving remains blocked pending variant-linked purchase items. Backend Jest: 28/28 across 12 suites; backend build passes. Batch 14: paid orders cannot be cancelled while refund settlement is unsupported; Admin hides the action and backend independently checks order/payment records. Payment updates prevent duplicate paid transactions and recalculate order payment state across all attempts. Backend Jest: 30/30 across 12 suites; backend/Admin builds pass. Remaining: finish category/brand/supplier/customer edge cases, navigation/route coverage, residual action-level permission gaps and full Admin Settings end-to-end verification.
 
-### Completion gate for every module
+### Completion gate
 
-- Inspect the matching backend controller/service/DTO/schema and neighboring Admin patterns before editing.
-- Use the established folder and naming conventions; no broad rewrites or new architectural style.
-- Implement real API integration, permission-aware actions, validation, loading/error/empty states and responsive behavior.
-- Run relevant typecheck/build/tests and review `git diff --check`.
-- Review the diff and report changed files and verification. Leave changes uncommitted unless the user explicitly asks for a commit.
+- Inspect the feature's backend controller/service/DTO/schema, Admin API/types/schema/components and neighboring patterns before editing.
+- Preserve established feature-first structure and existing user changes.
+- Implement real API integration, permission-aware actions, validation and responsive loading/error/empty states.
+- Run relevant typecheck/build/tests and `git diff --check`.
+- Update `PROJECT_CONTEXT.md`, `PROJECT_ARCHITECTURE.md` and this roadmap after material implementation changes.
+- Report actual checks and limitations; leave changes uncommitted unless asked.
 
 ## Milestone B — Storefront (blocked until Milestone A is complete)
 
 After the Admin Panel is declared complete:
-1. Make all route files valid modules and restore a passing build.
+1. Make route files valid modules and restore a passing build.
 2. Implement API client, typed endpoint contracts, cookie/session auth and refresh behavior.
 3. Implement public home/catalog/category/product detail.
 4. Implement customer registration/login/verification and account state.
 5. Implement customer cart using secured cart endpoints.
-6. Implement checkout/order creation and payment UI after verifying the order/payment contracts.
+6. Implement checkout/order creation and payment UI after verifying contracts.
 7. Implement account orders, profile and return workflows.
 
 ## Milestone C — Platform hardening and release readiness
 
-- Complete bKash/SSLCommerz provider sessions, callback/webhook signature verification, idempotency and refund flows.
-- Add domain and integration tests for auth, permissions, cart, orders, stock, payments, returns and mail.
-- Reconcile backend `.env.example` mismatch (`PRISMA_DATABASE_URL` vs code's `DATABASE_URL`) without exposing real environment values.
+- Complete bKash/SSLCommerz sessions, callback/webhook signature verification, idempotency and refund flows.
+- Add domain/integration tests for auth, permissions, cart, orders, stock, payments, returns, notifications and mail.
+- Reconcile backend `.env.example` mismatch (`PRISMA_DATABASE_URL` vs code's `DATABASE_URL`) without exposing secrets.
 - Add health/readiness checks, structured logs, rate limits, monitoring and deployment runbooks.
 
 ## Explicitly out of scope unless requested
 
-Google OAuth / Google Calendar is not an evidenced core CommerceOS requirement. Do not prioritize it unless the product owner explicitly requests it.
-
-### Discounts integration note
-- Discounts navigation is grouped under Marketing. The standalone Admin CRUD and backend configuration API are implemented; coupon redemption in carts/orders and usage-limit enforcement remain deferred.
-- User verified Discounts; Settings foundation is now underway. Settings completion is gated on product-owner decisions for shipping rates, notification preferences and security policies.
+Google OAuth / Google Calendar is not an evidenced core CommerceOS requirement. Do not prioritize it unless the product owner explicitly asks.
