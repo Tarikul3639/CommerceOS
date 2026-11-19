@@ -29,10 +29,10 @@ Each app is a separate package/repository with its own `.git` directory. The thr
 - `src/app.module.ts`: registers feature modules and a global audit-context interceptor. No global APP_GUARD is registered in the inspected module.
 
 ### Shared infrastructure
-- `src/common/prisma`: Prisma module/service; Prisma client generated under `src/lib/prisma`.
-- `src/common/mail`: mail module/service and Handlebars templates for auth, orders and notifications.
-- `src/common/cloudinary`: upload signature/controller/service.
-- `src/common/guards`, `strategies`, `decorators`: separate user/customer JWT and permission/role primitives.
+- `src/infrastructure/database`: `DatabaseModule` owns the Prisma-backed `PrismaService`; the Prisma 7 generated client is stored at `src/infrastructure/database/generated/prisma` (configured in `prisma/schema.prisma`). A temporary `src/lib/prisma` symlink preserves existing relative imports until feature imports are normalized.
+- `src/infrastructure/messaging/email`: `EmailModule`/`EmailService`, Nodemailer transport, delivery templates and email-log persistence.
+- `src/infrastructure/storage/cloudinary`: upload signature/controller/service.
+- `src/common/guards`, `strategies`, `decorators`: separate user/customer JWT and permission/role primitives. `common/` is reserved for cross-cutting application concerns, not external integrations.
 - `src/common/audit`: AsyncLocalStorage-style request audit context and interceptor.
 - `src/config`: app/auth/bcrypt/cloudinary/CORS/database/logger/mail/Swagger configs and Joi env schema.
 
@@ -145,3 +145,18 @@ Use `PROJECT_CONTEXT.md` as the fast handoff and this file for orientation. When
 - Discounts is registered in AppModule, backed by the Prisma Discount model and User creator/updater relations, with staff JWT + DISCOUNT_* permission checks and Admin RTK Query CRUD.
 - Admin navigation places Discounts under Marketing beside Banners, not Catalog.
 - The module is currently configuration/CRUD only: cart/order checkout does not yet apply coupon codes, and usageLimit is not counted or enforced. Do not describe the module as a complete redemption workflow.
+
+
+## 8. Infrastructure and payment architecture update (2026-11-19)
+- New infrastructure ownership: `src/infrastructure/database/` contains the Prisma module/service; `src/infrastructure/storage/cloudinary/` contains Cloudinary module, service, controller, upload guard, types and DTOs. `src/common/` remains for application-wide guards, strategies, decorators, interceptors, filters, pipes, interfaces, constants and utilities.
+- Compatibility re-exports remain at `src/common/prisma/` and `src/common/cloudinary/` so existing module/service imports and test mocks continue working during an incremental import migration. New code should import from `src/infrastructure/...` directly.
+- Payment domain remains `src/modules/payments/` (controllers, DTOs, services, strategies, interfaces, enums, security, webhooks and tests). Gateway-specific implementations live in `src/infrastructure/payment-gateways/{bkash,sslcommerz}/`; shared gateway webhook/HTTP utilities live alongside them.
+- Strategy Pattern boundary: `modules/payments/strategies` will own the application-facing strategy contract/factory; concrete gateway strategies and provider clients/config/mappers live under `infrastructure/payment-gateways`. The current newly added payment files are empty scaffolding only; no gateway is operational yet.
+- `PaymentModule` no longer registers the removed legacy `PaymentProviderFactory`. Payment creation remains persistence-only until the strategy contract and gateway adapters are implemented and wired.
+
+
+### 2026-11-19 — Direct Prisma infrastructure imports
+- Removed `src/common/prisma/` completely. All backend application imports and Vitest mocks now reference `src/infrastructure/database/prisma.service.js` or `prisma.module.js` directly; common guards/mail/strategies also use the infrastructure path.
+- No compatibility facade remains under `common/prisma`; `common/` is reserved for cross-cutting application code.
+- Cloudinary imports were also migrated to `src/infrastructure/storage/cloudinary` and its nested `services/`, `controllers/`, `guards/` and `types/` folders as part of keeping the infrastructure move buildable.
+- Verification after the direct-import migration: backend `npm run build` PASS; `npm test -- --run` PASS (14 files / 44 tests); `git diff --check` PASS. No migration, seed, database write, commit or push.

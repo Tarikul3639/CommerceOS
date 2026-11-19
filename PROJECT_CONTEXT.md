@@ -428,3 +428,10 @@ Do not reread the entire codebase by default. Use this map, then inspect only th
 - Added focused tests for Settings/Size Guide audit transactions, Discount create/update audit transactions and Cloudinary folder authorization. Backend verification: production build PASS; Vitest 14 files / 43 tests PASS; ESLint on all changed backend files PASS. Admin verification: production build PASS (43 routes), TypeScript typecheck PASS; ESLint on changed Admin files PASS. Full Admin lint now runs after explicitly setting React 19.2.8 in ESLint config, but reports 20 existing errors and 61 warnings elsewhere in the Admin codebase; those unrelated lint issues were not mass-modified.
 - Runtime unauthenticated checks: Admin direct navigation to /dashboard/settings/general redirects to login; General Settings, Payment Gateway, Shipping, Notification Preferences, Security and Cloudinary upload-signature APIs all return 401 without staff authentication. Authenticated role-by-role Settings E2E remains unverified because no test login/session was supplied and no database migration or data change was authorized.
 - No migrations, seed, DB writes, commit or push were run. Existing root .pnpm-store deletions were preserved.
+
+### 2026-11-19 — Prisma generated client location
+- Updated `prisma/schema.prisma` so Prisma 7 generates the client into `src/infrastructure/database/generated/prisma` rather than `src/lib/prisma`.
+- Regenerated Prisma Client with `npx prisma generate`; this changes generated source files only and does not run migrations or write to the database.
+- Kept a temporary `src/lib/prisma` symlink to the new generated-client directory so existing relative imports and Prisma seed imports remain compatible pending a dedicated import-normalization pass.
+- Updated `.gitignore` for the new generated output path and updated the architecture map.
+- Verification: backend production build PASS; Vitest 14 files / 44 tests PASS. No migrations, seed, database writes, commits or pushes.

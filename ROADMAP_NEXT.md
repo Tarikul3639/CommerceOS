@@ -55,3 +55,25 @@ After the Admin Panel is declared complete:
 ## Explicitly out of scope unless requested
 
 Google OAuth / Google Calendar is not an evidenced core CommerceOS requirement. Do not prioritize it unless the product owner explicitly asks.
+
+
+### 2026-11-19 — Permission guard regression coverage
+- Added a multi-permission AND-semantics regression test for `PermissionsGuard`; backend suite now passes 44 tests across 14 files and backend build passes.
+- Still pending: authenticated role-by-role Settings E2E against a migrated test database. No migration or DB write was run.
+
+
+### 2026-11-19 — Payment/infrastructure architecture scaffold
+- Backend technical integrations are being separated from `common`: Prisma now lives in `src/infrastructure/database`, Cloudinary in `src/infrastructure/storage/cloudinary`, with temporary re-export facades at the former common paths.
+- Payment domain stays under `src/modules/payments`; Strategy contract/factory belong there, while bKash and SSLCommerz concrete strategies/clients/configuration live under `src/infrastructure/payment-gateways`.
+- The payment files created in this step are empty scaffolding; provider sessions, callback verification, settlement and refunds are still unimplemented. Next implementation: shared Strategy contract/factory, then SSLCommerz sandbox session and verification flow.
+
+
+### 2026-11-19 — Direct Prisma infrastructure imports
+- Removed `src/common/prisma/` completely. All backend application imports and Vitest mocks now reference `src/infrastructure/database/prisma.service.js` or `prisma.module.js` directly; common guards/mail/strategies also use the infrastructure path.
+- No compatibility facade remains under `common/prisma`; `common/` is reserved for cross-cutting application code.
+- Cloudinary imports were also migrated to `src/infrastructure/storage/cloudinary` and its nested `services/`, `controllers/`, `guards/` and `types/` folders as part of keeping the infrastructure move buildable.
+- Verification after the direct-import migration: backend `npm run build` PASS; `npm test -- --run` PASS (14 files / 44 tests); `git diff --check` PASS. No migration, seed, database write, commit or push.
+
+### Architecture cleanup — infrastructure naming
+- Completed: email integration is under `backend/src/infrastructure/messaging/email` (`EmailModule`, `EmailService`); Prisma-backed database access is exposed by `DatabaseModule` while the ORM adapter remains `PrismaService`.
+- Next: continue with payment gateway strategy implementation under the established infrastructure/domain boundary.
