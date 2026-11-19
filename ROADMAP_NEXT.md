@@ -83,3 +83,9 @@ Google OAuth / Google Calendar is not an evidenced core CommerceOS requirement. 
 - Email delivery and Cloudinary integrations are located under `src/infrastructure/messaging/email` and `src/infrastructure/storage/cloudinary` respectively. `common/` remains for cross-cutting application concerns.
 - Added payment domain/gateway scaffolding under `src/modules/payments` and `src/infrastructure/payment-gateways`. This is not a working gateway integration: session creation, signature-verified callbacks, settlement and refunds remain next implementation work.
 - Latest backend checks: build PASS; Vitest 14 files / 44 tests PASS; ESLint PASS; diff check PASS. No database migrations or writes were performed.
+
+### 2026-11-20 — Admin Profile page completed
+- Added the Admin self-service profile route, personal details/avatar editing, account metadata and password-change form.
+- Added the staff-only self-profile API and user-scoped Cloudinary avatar upload signatures; profile updates are actor-audited transactionally.
+- Verification: backend build PASS; Vitest 17 files / 53 tests PASS; changed backend ESLint PASS; Admin typecheck/build PASS; changed Admin ESLint PASS; both app diff checks PASS.
+- No migrations, database writes, commits or pushes. Continue with remaining Admin completion work; do not begin Storefront until the Admin milestone is explicitly declared complete.

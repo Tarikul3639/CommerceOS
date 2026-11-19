@@ -166,3 +166,10 @@ Use `PROJECT_CONTEXT.md` as the fast handoff and this file for orientation. When
 - Completed infrastructure relocation for Prisma/database, email delivery and Cloudinary storage. `DatabaseModule` exposes `PrismaService`; email delivery is provided by `EmailModule`/`EmailService`.
 - Payment files under `modules/payments` and `infrastructure/payment-gateways` are architectural scaffolding only; provider sessions, verified callbacks, settlement and refunds are not operational.
 - Latest verification: `npm run build` PASS; `npm test -- --run` PASS (14 files / 44 tests); `npm run lint` PASS; `git diff --check` PASS. No migrations, seed execution or database writes were run.
+
+### Admin profile self-service (2026-11-20)
+- Admin `/dashboard/profile` is implemented under `features/profile/`; the existing sidebar profile dropdown links to this route.
+- `GET /auth/user/me` returns the authenticated staff member's public profile fields including `publicId` and `createdAt`. `PATCH /auth/user/profile` is protected by `UserJwtAuthGuard` and derives the target user ID exclusively from the JWT; it does not require `USER_UPDATE` and cannot target another account.
+- Profile updates support name, phone and paired avatar URL/Cloudinary public ID. The profile mutation and actor-attributed Activity Log share a Prisma transaction. Old Cloudinary assets are cleaned up after commit.
+- Signed uploads to the `users` folder are scoped to `rootFolder/users/{authenticatedUserId}`. The self-profile service only accepts a newly assigned public ID from that user's folder; unchanged legacy avatar references are retained. Password changes reuse the existing authenticated change-password workflow and session revocation behavior.
+- No schema migration is required.

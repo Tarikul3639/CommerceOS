@@ -441,3 +441,12 @@ Do not reread the entire codebase by default. Use this map, then inspect only th
 - Infrastructure ownership is now explicit: database/Prisma under `src/infrastructure/database`, email delivery under `src/infrastructure/messaging/email`, Cloudinary under `src/infrastructure/storage/cloudinary`, and provider-specific payment adapters under `src/infrastructure/payment-gateways`.
 - The remaining 88-file working diff consisted of formatting/import-layout and newline normalization from the infrastructure migration; no schema or migration changes were introduced in this final cleanup batch.
 - Verification: backend build PASS; Vitest 14 files / 44 tests PASS; ESLint PASS; `git diff --check` PASS. No migrations, seeds, database writes or provider calls were run.
+
+### 2026-11-20 — Admin Profile page
+- Added `/dashboard/profile` to the Admin app; the existing sidebar profile dropdown already linked to this route, so no navigation redesign was required.
+- Profile page includes editable name, phone and avatar; read-only email, role and verification state; account creation/last-login details; and a change-password form.
+- Added staff-authenticated `PATCH /auth/user/profile`, which only updates the authenticated user's own name, phone and paired avatar/publicId fields. The update and actor-attributed Activity Log are committed in one Prisma transaction; replaced/removed Cloudinary assets are deleted after the DB commit.
+- Extended `GET /auth/user/me` with `publicId` and `createdAt`. Profile RTK Query mutation invalidates the Auth tag and updates the Redux user state.
+- Scoped signed uploads in the `users` Cloudinary folder to the uploading staff user's folder. Every authenticated staff user may upload their own avatar; the profile endpoint rejects a newly assigned public ID belonging to another staff user's folder. Existing unchanged avatar IDs remain valid.
+- Added four focused Vitest cases for empty updates, paired avatar fields, transactional update/audit behavior and cross-user avatar rejection.
+- Verification: backend build PASS; backend Vitest 17 files / 53 tests PASS; changed backend ESLint PASS. Admin typecheck PASS; Admin production build PASS (includes `/dashboard/profile`); changed Admin ESLint PASS; both app `git diff --check` PASS. No migrations, database writes, commits or pushes.
