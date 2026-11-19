@@ -1,6 +1,6 @@
 # CommerceOS — Architecture & Codebase Map
 
-Audit date: 2026-11-18
+Audit date: 2026-11-19
 This document is a navigation index plus a record of verified findings. It is not a claim that every source line has been exhaustively reviewed. Use targeted file inspection before modifying any feature.
 
 ## 1. Repository layout
@@ -16,7 +16,7 @@ CommerceOS/
 └── ROADMAP_NEXT.md
 ```
 
-Each app is a separate package/repository with its own `.git` directory. The three app working trees were clean after the audit.
+Each app is a separate package/repository with its own `.git` directory. Working-tree status is checked at the end of each implementation batch.
 
 ## 2. Backend
 
@@ -29,7 +29,7 @@ Each app is a separate package/repository with its own `.git` directory. The thr
 - `src/app.module.ts`: registers feature modules and a global audit-context interceptor. No global APP_GUARD is registered in the inspected module.
 
 ### Shared infrastructure
-- `src/infrastructure/database`: `DatabaseModule` owns the Prisma-backed `PrismaService`; the Prisma 7 generated client is stored at `src/infrastructure/database/generated/prisma` (configured in `prisma/schema.prisma`). A temporary `src/lib/prisma` symlink preserves existing relative imports until feature imports are normalized.
+- `src/infrastructure/database`: `DatabaseModule` owns the Prisma-backed `PrismaService`; the Prisma 7 generated client is stored at `src/infrastructure/database/generated/prisma` (configured in `prisma/schema.prisma`). All application, test-mock and seed imports target the infrastructure-generated client directly; `src/lib/` has been removed.
 - `src/infrastructure/messaging/email`: `EmailModule`/`EmailService`, Nodemailer transport, delivery templates and email-log persistence.
 - `src/infrastructure/storage/cloudinary`: upload signature/controller/service.
 - `src/common/guards`, `strategies`, `decorators`: separate user/customer JWT and permission/role primitives. `common/` is reserved for cross-cutting application concerns, not external integrations.
@@ -128,7 +128,7 @@ Routes exist for activity logs, analytics, banners, brands, carts, categories, c
 | admin | `pnpm build` | Pass |
 | storefront | `pnpm build` | Fail: zero-byte addresses page is not a module |
 
-The backend test inventory contains only `src/app.controller.spec.ts`; its assertion body is empty. Do not interpret the green test command as meaningful business-flow coverage.
+Current backend verification (2026-11-19): production build passes; Vitest passes 14 files / 44 tests; ESLint passes; `git diff --check` passes. Authenticated role-by-role Settings E2E remains pending because no test session/migrated test database was provided.
 
 ## 6. Suggested architectural priorities
 1. Enforce authentication and authorization at every protected API boundary; add regression tests.
@@ -149,7 +149,7 @@ Use `PROJECT_CONTEXT.md` as the fast handoff and this file for orientation. When
 
 ## 8. Infrastructure and payment architecture update (2026-11-19)
 - New infrastructure ownership: `src/infrastructure/database/` contains the Prisma module/service; `src/infrastructure/storage/cloudinary/` contains Cloudinary module, service, controller, upload guard, types and DTOs. `src/common/` remains for application-wide guards, strategies, decorators, interceptors, filters, pipes, interfaces, constants and utilities.
-- Compatibility re-exports remain at `src/common/prisma/` and `src/common/cloudinary/` so existing module/service imports and test mocks continue working during an incremental import migration. New code should import from `src/infrastructure/...` directly.
+- No compatibility facades remain under `src/common/prisma/` or `src/common/cloudinary/`; application imports use `src/infrastructure/...` directly.
 - Payment domain remains `src/modules/payments/` (controllers, DTOs, services, strategies, interfaces, enums, security, webhooks and tests). Gateway-specific implementations live in `src/infrastructure/payment-gateways/{bkash,sslcommerz}/`; shared gateway webhook/HTTP utilities live alongside them.
 - Strategy Pattern boundary: `modules/payments/strategies` will own the application-facing strategy contract/factory; concrete gateway strategies and provider clients/config/mappers live under `infrastructure/payment-gateways`. The current newly added payment files are empty scaffolding only; no gateway is operational yet.
 - `PaymentModule` no longer registers the removed legacy `PaymentProviderFactory`. Payment creation remains persistence-only until the strategy contract and gateway adapters are implemented and wired.
@@ -160,3 +160,9 @@ Use `PROJECT_CONTEXT.md` as the fast handoff and this file for orientation. When
 - No compatibility facade remains under `common/prisma`; `common/` is reserved for cross-cutting application code.
 - Cloudinary imports were also migrated to `src/infrastructure/storage/cloudinary` and its nested `services/`, `controllers/`, `guards/` and `types/` folders as part of keeping the infrastructure move buildable.
 - Verification after the direct-import migration: backend `npm run build` PASS; `npm test -- --run` PASS (14 files / 44 tests); `git diff --check` PASS. No migration, seed, database write, commit or push.
+
+### 2026-11-19 — Consolidated backend cleanup and verification
+- Normalized generated Prisma Client imports across backend source, Vitest mocks and seed modules to `src/infrastructure/database/generated/prisma`; removed `src/lib/` and the former `src/common/prisma/` implementation.
+- Completed infrastructure relocation for Prisma/database, email delivery and Cloudinary storage. `DatabaseModule` exposes `PrismaService`; email delivery is provided by `EmailModule`/`EmailService`.
+- Payment files under `modules/payments` and `infrastructure/payment-gateways` are architectural scaffolding only; provider sessions, verified callbacks, settlement and refunds are not operational.
+- Latest verification: `npm run build` PASS; `npm test -- --run` PASS (14 files / 44 tests); `npm run lint` PASS; `git diff --check` PASS. No migrations, seed execution or database writes were run.

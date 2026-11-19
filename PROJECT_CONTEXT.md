@@ -435,3 +435,9 @@ Do not reread the entire codebase by default. Use this map, then inspect only th
 - Kept a temporary `src/lib/prisma` symlink to the new generated-client directory so existing relative imports and Prisma seed imports remain compatible pending a dedicated import-normalization pass.
 - Updated `.gitignore` for the new generated output path and updated the architecture map.
 - Verification: backend production build PASS; Vitest 14 files / 44 tests PASS. No migrations, seed, database writes, commits or pushes.
+
+### 2026-11-19 — Backend infrastructure cleanup and final verification
+- Normalized Prisma generated-client imports throughout backend source, tests and seeds to `src/infrastructure/database/generated/prisma`; removed `src/lib/` and all `src/common/prisma/` references.
+- Infrastructure ownership is now explicit: database/Prisma under `src/infrastructure/database`, email delivery under `src/infrastructure/messaging/email`, Cloudinary under `src/infrastructure/storage/cloudinary`, and provider-specific payment adapters under `src/infrastructure/payment-gateways`.
+- The remaining 88-file working diff consisted of formatting/import-layout and newline normalization from the infrastructure migration; no schema or migration changes were introduced in this final cleanup batch.
+- Verification: backend build PASS; Vitest 14 files / 44 tests PASS; ESLint PASS; `git diff --check` PASS. No migrations, seeds, database writes or provider calls were run.

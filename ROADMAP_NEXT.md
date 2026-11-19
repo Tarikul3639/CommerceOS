@@ -77,3 +77,9 @@ Google OAuth / Google Calendar is not an evidenced core CommerceOS requirement. 
 ### Architecture cleanup — infrastructure naming
 - Completed: email integration is under `backend/src/infrastructure/messaging/email` (`EmailModule`, `EmailService`); Prisma-backed database access is exposed by `DatabaseModule` while the ORM adapter remains `PrismaService`.
 - Next: continue with payment gateway strategy implementation under the established infrastructure/domain boundary.
+
+### 2026-11-19 — Infrastructure migration closeout
+- Completed direct imports for Prisma generated client and removed `src/lib/` and `src/common/prisma/`; database module/service live under `src/infrastructure/database`.
+- Email delivery and Cloudinary integrations are located under `src/infrastructure/messaging/email` and `src/infrastructure/storage/cloudinary` respectively. `common/` remains for cross-cutting application concerns.
+- Added payment domain/gateway scaffolding under `src/modules/payments` and `src/infrastructure/payment-gateways`. This is not a working gateway integration: session creation, signature-verified callbacks, settlement and refunds remain next implementation work.
+- Latest backend checks: build PASS; Vitest 14 files / 44 tests PASS; ESLint PASS; diff check PASS. No database migrations or writes were performed.
