@@ -1,6 +1,6 @@
 # CommerceOS — Development Roadmap
 
-Updated: 2026-11-19. Product-owner priority: finish the Admin Panel before starting Storefront.
+Updated: 2026-11-20. Product-owner priority: begin Storefront implementation; the Admin code/static permission audit is complete, with authenticated role-by-role Settings E2E still unverified.
 
 ## Milestone A — Complete the Admin Panel (current)
 
@@ -34,16 +34,27 @@ Work one module at a time. After implementation, run relevant checks and preserv
 - Update `PROJECT_CONTEXT.md`, `PROJECT_ARCHITECTURE.md` and this roadmap after material implementation changes.
 - Report actual checks and limitations; leave changes uncommitted unless asked.
 
-## Milestone B — Storefront (blocked until Milestone A is complete)
+## Milestone B — Storefront (current)
 
-After the Admin Panel is declared complete:
-1. Make route files valid modules and restore a passing build.
-2. Implement API client, typed endpoint contracts, cookie/session auth and refresh behavior.
-3. Implement public home/catalog/category/product detail.
-4. Implement customer registration/login/verification and account state.
-5. Implement customer cart using secured cart endpoints.
-6. Implement checkout/order creation and payment UI after verifying contracts.
-7. Implement account orders, profile and return workflows.
+The user has explicitly directed that Storefront work begin. Read `storefront/PROJECT_REQUIREMENTS.md` before implementation; it is the persistent source of truth for architecture and acceptance requirements.
+
+Confirmed client/server data architecture:
+- Next.js App Router Server Components + Native Fetch for server-side and SEO-critical data.
+- TanStack Query for client-side server state (API cache, mutations, refetching).
+- Zustand for client-only UI state; do not duplicate backend-owned cart, wishlist, customer or order records in Zustand.
+- Do not add Redux Toolkit/RTK Query unless the user changes this decision.
+
+Implementation sequence:
+1. Inspect Storefront's own Git status and installed Next.js 16.4 documentation; verify the shadcn preset setup and baseline build/typecheck.
+2. Build root layout, shadcn design tokens/components, independent Light/Dark/System theme and query provider.
+3. Implement tenant-aware typed server/browser API clients, customer auth/cookie handling, safe caching and normalized errors.
+4. Implement per-store SEO/social metadata, canonical URLs, Open Graph/Twitter, JSON-LD, sitemap and robots.
+5. Implement server-rendered homepage, catalog, categories, search and product details.
+6. Implement cart, wishlist, customer auth/account, checkout and order confirmation against verified NestJS backend contracts.
+7. Add consent-aware GTM/GA4, Meta Pixel + secure server-side CAPI, Google Ads conversion tracking; TikTok Pixel can follow later. Ensure event deduplication and per-store isolation.
+8. Complete responsive/accessibility/performance, SEO/social crawler and tracking QA, tests and production build.
+
+Work one vertical slice at a time. Do not install all planned packages upfront; add dependencies when implementing the relevant foundation/feature. Preserve existing user changes and do not commit/push unless asked.
 
 ## Milestone C — Platform hardening and release readiness
 
@@ -89,3 +100,10 @@ Google OAuth / Google Calendar is not an evidenced core CommerceOS requirement. 
 - Added the staff-only self-profile API and user-scoped Cloudinary avatar upload signatures; profile updates are actor-audited transactionally.
 - Verification: backend build PASS; Vitest 17 files / 53 tests PASS; changed backend ESLint PASS; Admin typecheck/build PASS; changed Admin ESLint PASS; both app diff checks PASS.
 - No migrations, database writes, commits or pushes. Continue with remaining Admin completion work; do not begin Storefront until the Admin milestone is explicitly declared complete.
+
+
+### 2026-11-20 — Storefront architecture and requirements approved
+- User directed that Storefront work begin. Replaced the former Admin-first blocker with Storefront as the current milestone; the Admin code/static permission audit is complete, while authenticated role-by-role Settings E2E remains a known unverified gap.
+- Recorded `storefront/PROJECT_REQUIREMENTS.md` as the Storefront source of truth. Confirmed Native Fetch + Next.js Server Components for server-side/SEO data, TanStack Query for client server-state, and Zustand for client-only UI state; no Redux Toolkit/RTK Query unless the user changes the decision.
+- Added SEO, social sharing, per-store marketing tracking, Meta Pixel/CAPI, GA4/GTM, Google Ads, consent, event deduplication, theme, security and implementation sequence requirements.
+- No application source changes, dependency installs, builds, tests, migrations, commits or pushes.

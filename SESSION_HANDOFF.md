@@ -11,7 +11,10 @@ Workspace: `/home/tarikul3639/Desktop/CommerceOS`
 5. This file
 
 ## Current priority
-Finish the Admin Panel before starting Storefront. The user explicitly authorized continuous, sequential work on the Full Admin consistency/security audit. Continue audit batches without pausing for approval unless a genuine product/data-model decision is required.
+The user has explicitly started Storefront work. Before implementation, read `storefront/PROJECT_REQUIREMENTS.md`; it records the confirmed API/state stack, SEO/social/ads requirements, multi-store rules, theme decisions and implementation sequence. Continue Storefront one vertical slice at a time, following the repository instructions and preserving existing working-tree changes.
+
+## Admin audit position
+The Admin code/static permission audit is complete. Authenticated role-by-role Settings E2E against a migrated test database remains unverified because no test staff session/database was supplied. This outstanding verification does not block the user's explicit decision to begin Storefront.
 
 ## Current audit position
 Batches 1–16 are documented in `ROADMAP_NEXT.md` and `PROJECT_CONTEXT.md`. They cover route/permission authorization, JWT account revalidation, staff privilege boundaries, purchase/payment/order invariants, stock boundaries, catalog/customer lifecycle, auth token lifecycle, Settings UI permission gating, role-permission escalation protection and transactional audit trails.

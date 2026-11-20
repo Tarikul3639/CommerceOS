@@ -44,16 +44,17 @@ Do not reread the entire codebase by default. Use this map, then inspect only th
 - Git status after checks was clean in backend, admin and storefront.
 - No source-code changes were made during the audit; only project documentation/context files are maintained at the monorepo root.
 
-## Current Admin-first milestone
-- The product owner explicitly set the sequence: finish the Admin Panel completely before starting Storefront. Do not implement Storefront features until Admin completion is confirmed.
-- Keep code structure aligned with the existing feature-first Admin and NestJS module conventions documented in `AGENTS.md`.
-- For each protected backend Admin route, enforce UserJwtAuthGuard and the matching PermissionsGuard permission; public storefront catalog reads and customer-auth flows must remain intentionally scoped.
-- Complete one Admin module at a time, verify it, report the exact changes and checks, then stop for user review.
-- Start the next module only when the user explicitly asks.
-- Update `PROJECT_CONTEXT.md`, `ROADMAP_NEXT.md` and `PROJECT_ARCHITECTURE.md` alongside every material implementation; do not leave documentation until a later audit.
+## Current Storefront milestone
+- The user has explicitly directed that Storefront work should begin. The former Admin-first sequencing constraint is superseded by this newer instruction.
+- Before Storefront implementation, read `storefront/PROJECT_REQUIREMENTS.md`. It is the persistent source of truth for the approved stack and requirements: Next.js App Router, Native Fetch for server-side API access, TanStack Query for client-side server state, Zustand for client-only UI state, SEO, social sharing, advertising/analytics, multi-store isolation, themes and implementation sequence.
+- Storefront must not use Redux Toolkit/RTK Query unless the user explicitly changes the decision. Do not duplicate backend-owned cart/wishlist/customer/order data in Zustand.
+- Preserve the existing root-level Storefront structure (`app/`, `components/`, `hooks/`, `lib/`) unless inspection justifies a change. Read the Storefront-specific `AGENTS.md` and installed Next.js 16.4 documentation before implementing Next.js APIs.
+- The Admin code/static permission audit is complete; authenticated role-by-role Settings E2E remains unverified against a migrated test database. This is a recorded verification gap, not a reason to disregard the user's explicit Storefront priority.
+- Work one Storefront vertical slice at a time, verify it, report changed files and exact checks, and preserve unrelated changes.
 - Never commit or push unless the user explicitly instructs it.
 
 ## Working agreement
+- **Storefront protected files (read-only):** `storefront/package.json`, `storefront/providers/theme-provider.tsx`, and `storefront/app/globals.css` may be read/inspected but must not be edited, modified, overwritten, reformatted, renamed, moved or deleted unless the user explicitly grants permission for the specific change. If a task needs one of these files changed, explain why and ask first.
 - Check `git status --short` in the affected app before editing.
 - Never read, print, copy, or commit actual `.env*` values. Use `.env.example` only.
 - Preserve current architecture and user changes. Avoid broad rewrites.
@@ -450,3 +451,13 @@ Do not reread the entire codebase by default. Use this map, then inspect only th
 - Scoped signed uploads in the `users` Cloudinary folder to the uploading staff user's folder. Every authenticated staff user may upload their own avatar; the profile endpoint rejects a newly assigned public ID belonging to another staff user's folder. Existing unchanged avatar IDs remain valid.
 - Added four focused Vitest cases for empty updates, paired avatar fields, transactional update/audit behavior and cross-user avatar rejection.
 - Verification: backend build PASS; backend Vitest 17 files / 53 tests PASS; changed backend ESLint PASS. Admin typecheck PASS; Admin production build PASS (includes `/dashboard/profile`); changed Admin ESLint PASS; both app `git diff --check` PASS. No migrations, database writes, commits or pushes.
+
+
+### 2026-11-20 — Storefront requirements and architecture decisions
+- Created `storefront/PROJECT_REQUIREMENTS.md` as the persistent Storefront requirements/architecture baseline for future sessions.
+- Confirmed API/state architecture: Next.js Server Components + Native Fetch for server-side/SEO-critical data; TanStack Query for client-side server state; Zustand only for client-owned UI state. Explicitly ruled out Redux Toolkit/RTK Query unless the user changes the decision.
+- Documented SEO, Open Graph/social sharing, JSON-LD, sitemap/robots, Meta Pixel + server-side CAPI, GA4/GTM, Google Ads conversion tracking, optional TikTok Pixel, consent, event deduplication, secure secret handling and per-store tracking isolation.
+- Documented multi-store tenant isolation, independent Light/Dark/System theme, responsive/accessibility/performance requirements and a phased implementation plan.
+- Updated `SESSION_HANDOFF.md` and the current milestone section here so a new session starts with Storefront requirements. Admin's authenticated role-by-role Settings E2E remains a known unverified gap.
+- No dependencies installed, application source changed, build/tests run, commit created or push performed.
+- Next: inspect Storefront app status and existing Next.js 16.4 docs, verify shadcn preset setup, then implement the foundation/provider layer in a separate task.
