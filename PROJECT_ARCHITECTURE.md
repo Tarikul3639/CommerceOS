@@ -173,3 +173,11 @@ Use `PROJECT_CONTEXT.md` as the fast handoff and this file for orientation. When
 - Profile updates support name, phone and paired avatar URL/Cloudinary public ID. The profile mutation and actor-attributed Activity Log share a Prisma transaction. Old Cloudinary assets are cleaned up after commit.
 - Signed uploads to the `users` folder are scoped to `rootFolder/users/{authenticatedUserId}`. The self-profile service only accepts a newly assigned public ID from that user's folder; unchanged legacy avatar references are retained. Password changes reuse the existing authenticated change-password workflow and session revocation behavior.
 - No schema migration is required.
+
+
+### Wishlist domain (2026-11-20)
+- Backend feature lives at src/modules/wishlists/ and is registered in AppModule. A customer owns one Wishlist; WishlistItem rows link saved Product records and enforce uniqueness per wishlist/product. Customer deletion cascades through the wishlist; product deletion is restricted while a saved reference exists, matching the existing cart/order product-retention policy.
+- Customer API routes use CustomerJwtAuthGuard and CurrentCustomer; staff reporting uses a separate AdminWishlistController with UserJwtAuthGuard, PermissionsGuard and WISHLIST_READ. Admin cannot mutate customer wishlist data.
+- Admin feature lives at src/features/wishlists/ and route /dashboard/wishlists; it is a read-only searchable/paginated customer wishlist report.
+- Migrations 20261120220000_add_wishlists (enum + tables/relations) and 20261120220100_grant_wishlist_permission (ADMIN grant) must be applied before the API is used. They have not been applied as of this note.
+- Customer endpoints return product availability separately so existing saved products can still be displayed/removed if a product is unpublished or soft-deleted.

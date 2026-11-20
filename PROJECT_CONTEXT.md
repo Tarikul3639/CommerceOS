@@ -478,3 +478,13 @@ Do not reread the entire codebase by default. Use this map, then inspect only th
 - Added a global working-agreement rule: every React/UI component created or modified across CommerceOS must include clear, concise explanatory comments describing its purpose, responsibility and non-obvious behavior/important logic.
 - Comments must remain accurate and useful; avoid redundant comments that only restate self-evident code.
 - This is a project-wide coding convention for Backend, Admin and Storefront component work wherever applicable.
+
+
+### 2026-11-20 — Backend + Admin Wishlist module
+- Added a persistent one-wishlist-per-customer data model (Wishlist + WishlistItem) with cascading customer/wishlist ownership, restrictive product references and a unique (wishlistId, productId) constraint to prevent duplicates.
+- Added customer-authenticated GET /wishlist, POST /wishlist/items, DELETE /wishlist/items/:productId and DELETE /wishlist endpoints. Customer identity is always derived from CurrentCustomer; add operations accept only published, non-deleted products and use a unique-key upsert for idempotency.
+- Added staff-only GET /admin/wishlists, guarded by the new WISHLIST_READ permission, with pagination and search by customer name/email/phone or product name. Admin view is intentionally read-only.
+- Added Prisma migrations 20261120220000_add_wishlists and 20261120220100_grant_wishlist_permission. The enum change and permission grant are separate migrations to avoid PostgreSQL enum transaction ordering issues. Migrations have NOT been applied to any database.
+- Added Admin RTK Query API, typed contracts, permission-gated /dashboard/wishlists page, Sales navigation item and responsive read-only wishlist details dialog.
+- Verification: Prisma format, validate and generate passed; backend pnpm build passed; backend pnpm test passed (18 files / 57 tests, including 2 Wishlist add-service tests); Admin pnpm typecheck and pnpm build passed; git diff --check passed in both app repos. Backend pnpm exec tsc --noEmit still reports an unrelated pre-existing type error in src/modules/settings/services/settings-audit.spec.ts (emailOrders is not a member of UpdateNotificationPreferencesDto); the Nest production build succeeds.
+- No migration was applied, no database was modified, and no commit or push was created. Next: connect Storefront wishlist UI to these customer API contracts after the backend migration is applied.
