@@ -54,6 +54,7 @@ Do not reread the entire codebase by default. Use this map, then inspect only th
 - Never commit or push unless the user explicitly instructs it.
 
 ## Working agreement
+- **Component documentation rule (global):** Every React/UI component created or modified in CommerceOS must include clear, concise explanatory comments documenting its purpose, responsibility and any non-obvious behavior or important logic. Comments must remain accurate and useful; do not add redundant comments that merely restate obvious code. Apply this rule across Backend, Admin and Storefront component work wherever components are present.
 - **Storefront protected files (read-only):** `storefront/package.json`, `storefront/providers/theme-provider.tsx`, and `storefront/app/globals.css` may be read/inspected but must not be edited, modified, overwritten, reformatted, renamed, moved or deleted unless the user explicitly grants permission for the specific change. If a task needs one of these files changed, explain why and ask first.
 - Check `git status --short` in the affected app before editing.
 - Never read, print, copy, or commit actual `.env*` values. Use `.env.example` only.
@@ -461,3 +462,19 @@ Do not reread the entire codebase by default. Use this map, then inspect only th
 - Updated `SESSION_HANDOFF.md` and the current milestone section here so a new session starts with Storefront requirements. Admin's authenticated role-by-role Settings E2E remains a known unverified gap.
 - No dependencies installed, application source changed, build/tests run, commit created or push performed.
 - Next: inspect Storefront app status and existing Next.js 16.4 docs, verify shadcn preset setup, then implement the foundation/provider layer in a separate task.
+
+
+### 2026-11-20 — Storefront home-page foundation
+- Added the public route-group layout at `storefront/app/(public)/layout.tsx` and moved the homepage route into `storefront/app/(public)/page.tsx`; removed the duplicate root `app/page.tsx` placeholder so `/` has one route owner.
+- Added the initial feature-first home module under `storefront/features/home/components`, with a server-rendered page composition and a small Motion-powered hero client component that respects reduced-motion preferences.
+- Implemented shared storefront header/footer components and connected the public layout to them. Their `Your Store` branding is temporary until tenant/store configuration is integrated.
+- Implemented the TanStack Query v5 QueryProvider and integrated it into the root layout. Motion was installed by the user; package manifest and lockfile changes from that install were preserved.
+- Kept protected files `storefront/package.json`, `storefront/providers/theme-provider.tsx` and `storefront/app/globals.css` untouched by the assistant. The theme provider still defaults to `system`; changing it to the approved Light-first default requires explicit permission to edit the protected provider.
+- Verification: ESLint on changed TS/TSX files PASS; Prettier on changed TS/TSX files PASS; `git diff --check` PASS. `pnpm typecheck` remains blocked by pre-existing empty route `page.tsx` files across account/auth/public routes, which generate Next.js route-validator TypeScript errors; unrelated placeholder routes were not modified.
+- No commit or push created. Next: inspect backend public store/catalog contracts, then replace temporary home copy/branding and static fallback metadata with tenant-aware server-fetched store data before building dynamic home sections.
+
+
+### 2026-11-20 — Global component documentation rule
+- Added a global working-agreement rule: every React/UI component created or modified across CommerceOS must include clear, concise explanatory comments describing its purpose, responsibility and non-obvious behavior/important logic.
+- Comments must remain accurate and useful; avoid redundant comments that only restate self-evident code.
+- This is a project-wide coding convention for Backend, Admin and Storefront component work wherever applicable.
