@@ -40,7 +40,7 @@ Each app is a separate package/repository with its own `.git` directory. Working
 `src/modules` includes:
 - `auth`: separate user and customer login/register/refresh/logout/password reset/email verification flows.
 - `users`, `customers`, `permissions`: staff/customer management and role permissions.
-- `catalog`: products, product images/options/variants, brands and categories; separate admin/store product controllers.
+- `catalog`: products, product images/options/variants, brands and categories; separate admin/store product controllers plus the existing public `StoreProductsController` for product listing, details and homepage-specific product sections. New Arrivals has its own query DTO/service and shares the store product response mapper.
 - `inventory/stocks`: stock reads and manual adjustments.
 - `carts`: customer cart CRUD plus a staff-only, read-only Admin cart overview (`GET /admin/carts`) protected by `UserJwtAuthGuard`, `PermissionsGuard` and `CART_READ`.
 - Product variant creation/update no longer accepts stock quantities; stock mutations are isolated to STOCK_UPDATE-protected stock adjustment APIs. Stock adjustments use atomic increments and Serializable transactions; variants/products with positive stock cannot be deleted until stock is adjusted to zero through the Stock module. Variant combination generation is capped at 500. Catalog product/image/option/variant mutations now record the authenticated staff actor in Activity Logs. Product Image endpoints do not UUID-parse their identifiers; image URL and Cloudinary public ID replacements are paired.
@@ -116,7 +116,7 @@ Routes exist for activity logs, analytics, banners, brands, carts, categories, c
 - Its README and root layout are still create-next-app boilerplate.
 - Representative tracked page files for home, product listing, cart, checkout, account pages, auth login, header, API client, auth helpers, cart store and hooks are zero bytes.
 - `pnpm build` currently fails TypeScript: `src/app/(account)/account/addresses/page.tsx` is not a module.
-- Treat storefront as a scaffold, not a finished customer application.
+- The homepage now has a server-rendered vertical slice for Hero Banner, Category Showcase, Featured Products, Promotional Banner and New Arrivals. New Arrivals uses the `GET /store/products/new-arrivals` endpoint on `StoreProductsController`; the remaining homepage sections and wider customer workflows are still incomplete.
 
 ## 5. Build/test baseline (2026-11-18; historical baseline, not a current full-repository audit)
 
