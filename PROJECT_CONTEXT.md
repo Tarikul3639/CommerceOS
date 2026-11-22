@@ -488,3 +488,28 @@ Do not reread the entire codebase by default. Use this map, then inspect only th
 - Added Admin RTK Query API, typed contracts, permission-gated /dashboard/wishlists page, Sales navigation item and responsive read-only wishlist details dialog.
 - Verification: Prisma format, validate and generate passed; backend pnpm build passed; backend pnpm test passed (18 files / 57 tests, including 2 Wishlist add-service tests); Admin pnpm typecheck and pnpm build passed; git diff --check passed in both app repos. Backend pnpm exec tsc --noEmit still reports an unrelated pre-existing type error in src/modules/settings/services/settings-audit.spec.ts (emailOrders is not a member of UpdateNotificationPreferencesDto); the Nest production build succeeds.
 - No migration was applied, no database was modified, and no commit or push was created. Next: connect Storefront wishlist UI to these customer API contracts after the backend migration is applied.
+
+
+### 2026-11-21 — Storefront Banner feature
+- Added a dedicated `storefront/features/banner/` feature with typed campaign data, three homepage campaign slides, editorial image backdrops, CTA links, slide pagination, previous/next controls, swipe/keyboard navigation and six-second autoplay.
+- Autoplay pauses while the carousel is hovered or focused and respects reduced-motion preferences. The first campaign heading is the homepage H1; subsequent slide headings use H2.
+- Integrated the Banner feature into the existing public homepage composition. Existing HomeHero source remains untouched but is no longer rendered by the homepage.
+- Campaign content and Unsplash image URLs are temporary static demo data; no new backend endpoint or admin integration was assumed. Existing user edits in Storefront header and cart sheet were preserved.
+- Verification: targeted ESLint PASS; Prettier check PASS; `git diff --check` PASS. Storefront typecheck and production build both remain blocked by pre-existing empty route page files (e.g. account/addresses and other auth/account/public placeholders); Next.js compilation itself succeeded before TypeScript validation stopped the build.
+- No package manifest/protected file changes, dependency installs, commits, pushes or backend/database changes.
+
+
+### Banner visual correction — 2026-11-21
+- Removed hard-coded slate palette classes from the Banner feature. Interactive UI now uses the Storefront shadcn semantic tokens (`primary`, `background`, `ring`, `muted`) so its controls follow the configured CSS preset. White copy and a neutral dark overlay remain only for legibility over campaign photography.
+- Replaced custom white CTA/outline button styling with the initialized shadcn Button default variant, which inherits the configured primary and primary-foreground colors.
+- Reduced the Banner width to the existing storefront content width and adjusted its responsive height.
+- Re-ran targeted ESLint and Prettier checks successfully. Production build still compiles Next.js successfully but is blocked during TypeScript validation by the existing empty route page files listed above.
+
+
+### 2026-11-21 — Storefront Banner backend integration and ratio layout
+- Added a public read-only `GET /api/v1/banners/storefront` feed. It returns only active `HOME_TOP` banners whose start/end schedule currently allows display, ordered by `sortOrder` then newest creation; internal actor details and Cloudinary IDs are excluded from the public DTO. Existing staff CRUD/list routes retain their authentication and permission guards.
+- Replaced the three static demo slides with server-side Native Fetch data from the new backend feed. Storefront reads the server-only `API_URL` environment variable and falls back to the local development API base `http://localhost:5000/api/v1`; failed/unavailable banner requests degrade to an empty banner area rather than breaking the homepage. Responses are revalidated every 60 seconds.
+- Storefront uses the backend's single `imageUrl` field; deprecated `mobileImageUrl` is not used. The same image is rendered with `cover` cropping and responsive aspect ratios (4:3 mobile, 16:9 tablet/desktop); no fixed pixel height is applied. Optional title, link, button text and new-tab behavior come from backend data.
+- Updated the Banner carousel to receive server-fetched slides while retaining autoplay, pause-on-hover/focus, reduced-motion support and controls. Existing user edits in Storefront header/cart sheet were preserved.
+- Verification: backend `pnpm build` PASS; Storefront targeted ESLint PASS; Prettier write applied to two files; `git diff --check` PASS in backend and Storefront. Storefront `pnpm typecheck` remains blocked by pre-existing empty route page modules across account/auth/public routes; no Banner-specific TypeScript error appeared in the output. No migrations or database changes were needed.
+- No commit or push created. Storefront `API_URL` should be configured to the backend API base in non-local environments.
