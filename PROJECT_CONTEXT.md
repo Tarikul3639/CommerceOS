@@ -520,3 +520,33 @@ Do not reread the entire codebase by default. Use this map, then inspect only th
 - Added the server-fetched Storefront New Arrivals API function and homepage section after the Promotional Banner. It reuses the existing ProductGrid/ProductCard and fetches in parallel with the other homepage sections; no client-only fetch or migration is required.
 - Verification: backend `pnpm build` PASS; backend Vitest 18 files / 57 tests PASS; changed backend ESLint PASS; changed Storefront ESLint PASS; backend `git diff --check` PASS. Storefront `pnpm typecheck` remains blocked by pre-existing zero-byte/non-module account, auth and public route page files under `.next/dev/types/validator.ts`; no errors from the changed homepage files were reported.
 - No migrations, seed execution, commits or pushes. Next homepage section in the approved order: Best Sellers.
+
+
+### 2026-11-25 — Storefront wishlist live refresh
+- Fixed the Storefront product wishlist toggle so a successful add/remove invalidates the separate `['wishlist-items']` React Query cache used by the wishlist page and header sheet. The list and item count now refetch after the mutation instead of remaining stale until a browser refresh; the existing `['customer-wishlist']` cache and Zustand guest IDs continue to update as before.
+- Changed only `storefront/features/wishlist/hooks/use-product-wishlist.ts`; no backend, database, migration, or dependency changes.
+- Verification: targeted ESLint PASS; Prettier check PASS; `git diff --check` PASS. No commit or push.
+
+
+### 2026-11-25 — Storefront breadcrumbs across route groups
+- Added a reusable pathname-aware Storefront breadcrumb component using the existing shadcn Breadcrumb primitives. It renders Home plus linked ancestor segments and a non-linked current page, with readable labels for product, order and return detail routes; the homepage intentionally hides breadcrumbs.
+- Integrated it into the public layout and added lightweight account/auth layouts so breadcrumb navigation appears at the top of all non-home Storefront routes across those route groups.
+- Changed/added: `storefront/components/layout/store-breadcrumbs.tsx`, `storefront/app/(public)/layout.tsx`, `storefront/app/(account)/layout.tsx`, `storefront/app/(auth)/layout.tsx`.
+- Verification: targeted ESLint PASS; Prettier check PASS; Storefront `pnpm typecheck` PASS; `git diff --check` PASS. Existing unrelated working-tree changes were preserved. No commit or push.
+
+### 2026-11-25 — Storefront Products listing and filter drawer
+- Replaced the /products placeholder with a server-rendered catalog page using the existing public product, category and brand APIs. Added pagination, product search, sorting (newest/oldest, price ascending/descending, name A–Z/Z–A), and a left-side shadcn Sheet filter drawer.
+- Filter drawer supports category, brand, minimum/maximum price, in-stock-only and featured-only filters. Applied search/filter/sort state is encoded in URL query parameters so filtered catalog views can be shared and refreshed.
+- Extended the public backend product query contract with price bounds, stock availability and sort field/direction; category, brand, search and featured filtering reuse existing query support. Public products remain restricted to published, non-deleted records.
+- Added a small Storefront brand API adapter for active filter options. Existing category product fetching now reuses the shared product listing API function.
+- Verification: Storefront targeted ESLint PASS; Storefront typecheck PASS; Storefront production build PASS (31 static/dynamic routes); backend build PASS; backend Vitest 18 files / 57 tests PASS; backend changed-file ESLint PASS; git diff --check PASS in both repositories.
+- Price bounds currently query the product's stored sellingPrice field; stock filtering checks for at least one variant with positive stock. No migrations, database writes, commits or pushes.
+### 2026-11-25 — Refined Products filter Sheet
+- Updated only the storefront ProductFiltersSheet to use shadcn Accordion, Slider and ScrollArea components.
+- Category accordion is open by default; Brand starts closed. Availability/highlights and Price are collapsible groups; Price is placed last and uses a two-thumb range slider (৳0–৳100,000, step ৳100) instead of number inputs.
+- Removed the custom SheetContent width override so the left Sheet uses the shadcn default width. Kept the filter body scrollable and the Reset/Apply footer fixed.
+- Verification: targeted ESLint PASS; Storefront typecheck PASS; Storefront production build PASS (31 routes); git diff --check PASS.
+
+### 2026-11-25 — Products filter drawer uses available height
+- Updated `storefront/features/product/components/product-listing/product-filters-sheet.tsx` so the category/brand ScrollArea sits in a `flex min-h-0 flex-1 flex-col` wrapper and expands to all remaining vertical space. Removed the fixed `max-h-60` limits and nested list scrolling; the shared ScrollArea now handles overflow. Availability/price remain in the fixed bottom area and the action footer remains fixed.
+- Verification: targeted ESLint PASS; Storefront `pnpm typecheck` PASS; Prettier PASS; `git diff --check` PASS. No commit or push.
